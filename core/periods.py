@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import streamlit as st
 
 from core.clock import today as local_today, local_now
-from core.database import con, get_config, set_config
+from core.database import con, read_con, get_config, set_config
 
 MODE_LABELS = {
     "calendar": "Mes calendario",
@@ -150,7 +150,7 @@ def ensure_active_period(db, today=None):
     active = get_config("periodo_activo", "", db)
 
     if active:
-        with con(db) as c:
+        with read_con(db) as c:
             row = c.execute(
                 "SELECT inicio,fin FROM periodos_financieros WHERE periodo=?",
                 (active,),
@@ -174,7 +174,7 @@ def active_period(db):
     key = ensure_active_period(db)
     if not key:
         return None
-    with con(db) as c:
+    with read_con(db) as c:
         row = c.execute(
             "SELECT periodo,inicio,fin,criterio,detalle FROM periodos_financieros WHERE periodo=?",
             (key,),
@@ -194,7 +194,7 @@ def period_for_date(value, db):
     if hasattr(value, "isoformat"):
         value = value.isoformat()
     value = str(value)[:10]
-    with con(db) as c:
+    with read_con(db) as c:
         row = c.execute(
             """SELECT periodo FROM periodos_financieros
                WHERE inicio<=? AND (fin IS NULL OR fin>=?)
@@ -253,7 +253,7 @@ def save_preference(mode, value, db):
     # Cambiar la preferencia nunca modifica períodos ya cerrados. El período
     # actualmente abierto conserva su etiqueta/criterio y se cierra justo antes
     # del primer inicio válido del nuevo criterio.
-    with con(db) as c:
+    with read_con(db) as c:
         row = c.execute(
             "SELECT inicio,fin FROM periodos_financieros WHERE periodo=?",
             (active_key,),
@@ -266,7 +266,8 @@ def save_preference(mode, value, db):
             c.execute("UPDATE periodos_financieros SET fin=NULL WHERE periodo=?", (active_key,))
         return
 
-    anchor = date.fromisoformat(row[1]) if row[1] else local_today()
+    current_finish = date.fromisoformat(row[1]) if row[1] else local_today()
+    anchor = max(local_today(), current_finish)
     next_start = _next_boundary_after(anchor, mode, int(value or 1))
     if next_start:
         with con(db) as c:
