@@ -25,7 +25,7 @@ print('PASS migración antigua/idempotencia/preservación y rollback')
 # API tested with a mocked client: no key or request to a provider.
 app=AppTest.from_file(str(ROOT/'app.py')).run()
 app.selectbox(key='sidebar_group').select('Más').run()
-app.selectbox(key='section_detail').select('Preguntale a Átomo').run()
+app.button(key='detail_more_Preguntale a Átomo').click().run()
 assert len(app.error)==1 and not app.exception
 import screens.assistant as screen
 original_getenv=os.getenv
