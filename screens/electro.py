@@ -17,12 +17,15 @@ def render(period, db):
     st.header("⚡ Electro financiero")
     st.caption("Una lectura rápida de liquidez, solvencia y flujo. No toma decisiones por vos.")
 
-    from core.history import render_history_notice, render_incomplete_notice, render_cycle_summary
-    render_history_notice(period, db)
-    render_cycle_summary(period, db)
-    render_incomplete_notice(db)
+    with st.spinner("Leyendo tus datos financieros…"):
+        e = electro_financiero(period, db)
 
-    e = electro_financiero(period, db)
+    if e.get("_unresolved_refs", 0):
+        st.warning(
+            f"Tenés {e['_unresolved_refs']} referencias de deudas u obligaciones por confirmar. "
+            "El Electro es parcial hasta completarlas en Pendientes."
+        )
+
     render_electro(e)
 
     st.markdown("### Perfil de Átomo")
