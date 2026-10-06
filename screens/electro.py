@@ -26,7 +26,7 @@ def render(period, db):
     render_electro(e)
 
     st.markdown("### Perfil de Átomo")
-    profile = atomo_profile(period, db)
+    profile = atomo_profile(period, db, electro=e)
     render_atomo_profile(profile)
     st.caption("El nivel mide progreso y orden relativo, no riqueza absoluta.")
 
@@ -60,7 +60,7 @@ def render(period, db):
         st.dataframe(detail, width="stretch", hide_index=True)
         st.caption("Se calcula en ARS y con los datos efectivamente cargados.")
 
-    suggestions, watch = deterministic_suggestions(period, db)
+    suggestions, watch = deterministic_suggestions(period, db, electro=e)
     left, right = st.columns([1.25, 1])
 
     with left:
