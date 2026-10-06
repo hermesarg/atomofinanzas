@@ -74,9 +74,10 @@ def detail_widget():
 
 
 def period_selector(db):
-    from core.periods import ensure_active_period
+    from core.periods import active_period
     today = local_today()
-    active = ensure_active_period(db)
+    active_info = active_period(db)
+    active = active_info["periodo"] if active_info else None
     if active:
         st.session_state._active_period_key = active
 
