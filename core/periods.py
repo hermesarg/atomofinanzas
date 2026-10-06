@@ -399,7 +399,7 @@ def render_settings(db):
     st.markdown("### 🗓️ Períodos financieros")
     mode = get_config("periodo_modo", "calendar", db)
     current_label = MODE_LABELS.get(mode, mode)
-    st.caption(f"Criterio actual: {current_label}. Los cambios se aplican hacia adelante; no se reescribe el historial.")
+    st.caption(f"Criterio elegido para próximos períodos: {current_label}. El período abierto conserva su propia definición y el historial no se reescribe.")
 
     labels = {
         "Mes calendario": "calendar",
