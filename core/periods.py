@@ -16,8 +16,22 @@ MODE_LABELS = {
 }
 
 
+def _cache_db(db):
+    return str(db)
+
+
+def _invalidate_cache():
+    st.session_state.pop("_period_active_cache", None)
+
+
 def setup_complete(db):
-    return bool(get_config("periodo_modo", "", db))
+    cached = st.session_state.get("_period_setup_cache")
+    if cached and cached.get("db") == _cache_db(db):
+        return bool(cached.get("value"))
+    value = bool(get_config("periodo_modo", "", db))
+    if value:
+        st.session_state["_period_setup_cache"] = {"db": _cache_db(db), "value": True}
+    return value
 
 
 def _month_shift(year, month, delta):
@@ -87,6 +101,8 @@ def _insert_period(start, end, mode, detail, db):
             ),
         )
     set_config("periodo_activo", key, db)
+    _invalidate_cache()
+    st.session_state["_period_setup_cache"] = {"db": _cache_db(db), "value": True}
     return key
 
 
@@ -177,6 +193,11 @@ def ensure_active_period(db, today=None):
 
 
 def active_period(db):
+    today_key = local_today().isoformat()
+    cached = st.session_state.get("_period_active_cache")
+    if cached and cached.get("db") == _cache_db(db) and cached.get("today") == today_key:
+        return cached.get("info")
+
     key = ensure_active_period(db)
     if not key:
         return None
@@ -187,13 +208,19 @@ def active_period(db):
         ).fetchone()
     if not row:
         return None
-    return {
+    info = {
         "periodo": row[0],
         "inicio": row[1],
         "fin": row[2],
         "criterio": row[3],
         "detalle": row[4],
     }
+    st.session_state["_period_active_cache"] = {
+        "db": _cache_db(db),
+        "today": today_key,
+        "info": info,
+    }
+    return info
 
 
 def period_for_date(value, db):
@@ -243,6 +270,8 @@ def _next_boundary_after(anchor, mode, value):
 
 
 def save_preference(mode, value, db):
+    _invalidate_cache()
+    st.session_state.pop("_period_setup_cache", None)
     if mode not in MODE_LABELS:
         raise ValueError("Elegí un criterio de período válido.")
     if mode in {"salary_fixed", "salary_business"}:
