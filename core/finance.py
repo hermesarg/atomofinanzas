@@ -260,8 +260,8 @@ def electro_financiero(period, db=None):
         "flexible_spend": float(summary["discrecional"]),
     }
 
-def deterministic_suggestions(period, db=None):
-    e = electro_financiero(period, db)
+def deterministic_suggestions(period, db=None, electro=None):
+    e = electro if electro is not None else electro_financiero(period, db)
     suggestions = []
     watch = []
 
@@ -457,34 +457,40 @@ LEVELS = [
 _LEVEL_THRESHOLDS = [18, 30, 42, 54, 65, 74, 82, 90, 101]
 
 
-def atomo_profile(period, db=None):
-    e = electro_financiero(period, db)
-    summary, mov = period_summary(period, db)
-    debts = debts_df(db)
-    incomes = float(summary.get("ingresos", 0) or 0)
-    flex = float(summary.get("discrecional", 0) or 0)
-    flex_ratio = (flex / incomes) if incomes > 0 else 0.0
-
+def atomo_profile(period, db=None, electro=None):
+    e = electro if electro is not None else electro_financiero(period, db)
     history = movements_df(db=db)
-    # Un resumen importado no demuestra hábitos de carga ni un historial completo.
-    history = history[history["importado"].fillna(0) == 0]
-    history = history[history["moneda"].fillna("ARS") == "ARS"]
-    months = sorted(set(history["fecha"].str[:7]))
-    months = [month for month in months if month <= period][-6:]
-    habit_scores = []
-    for month in months:
-        summary_month, _ = period_summary(month, db)
-        inc = summary_month["ingresos"]
-        out = summary_month["gastos"] + summary_month["compromisos"]
-        flow = max(0, min(1, (inc - out) / inc + 0.5)) if inc > 0 else 0.5
-        flexible = max(0, 1 - summary_month["discrecional"] / inc / 0.35) if inc > 0 else 0.5
-        records = history[history["fecha"].str[:7] == month]
-        organized = records["cuenta_origen_id"].notna() | records["cuenta_destino_id"].notna() | (records["tipo"] == "Compromiso")
-        overdue = records[(records["tipo"] == "Compromiso") & (records["fecha"] < local_today().isoformat())]
-        completion = 1 - len(overdue) / max(1, len(records))
-        habit_scores.append(100 * (0.4 * flow + 0.2 * flexible + 0.2 * organized.mean() + 0.2 * completion))
+
+    if history.empty:
+        incomes = 0.0
+        flex_ratio = 0.0
+        habit_scores = []
+    else:
+        history = history[history["importado"].fillna(0) == 0].copy()
+        history = history[history["moneda"].fillna("ARS") == "ARS"].copy()
+        history["_period"] = history["periodo_registro"].fillna(history["fecha"].str[:7])
+        periods = sorted(set(history["_period"].dropna()))
+        periods = [p for p in periods if p <= period][-6:]
+        habit_scores = []
+
+        current = history[history["_period"] == period]
+        incomes = float(current.loc[current["tipo"] == "Ingreso", "monto"].sum()) if not current.empty else 0.0
+        flex = float(current.loc[(current["tipo"] == "Gasto") & (current["categoria"].isin(DISCRETIONARY)), "monto"].sum()) if not current.empty else 0.0
+        flex_ratio = flex / incomes if incomes > 0 else 0.0
+
+        for p in periods:
+            records = history[history["_period"] == p]
+            inc = float(records.loc[records["tipo"] == "Ingreso", "monto"].sum())
+            out = float(records.loc[records["tipo"].isin(["Gasto", "Compromiso"]), "monto"].sum())
+            flexible_amount = float(records.loc[(records["tipo"] == "Gasto") & (records["categoria"].isin(DISCRETIONARY)), "monto"].sum())
+            flow = max(0, min(1, (inc - out) / inc + 0.5)) if inc > 0 else 0.5
+            flexible = max(0, 1 - flexible_amount / inc / 0.35) if inc > 0 else 0.5
+            organized = records["cuenta_origen_id"].notna() | records["cuenta_destino_id"].notna() | (records["tipo"] == "Compromiso")
+            overdue = records[(records["tipo"] == "Compromiso") & (records["fecha"] < local_today().isoformat())]
+            completion = 1 - len(overdue) / max(1, len(records))
+            habit_scores.append(100 * (0.4 * flow + 0.2 * flexible + 0.2 * organized.mean() + 0.2 * completion))
+
     score = sum(habit_scores) / len(habit_scores) if habit_scores else 0.0
-    # La evidencia sostenida importa: un único mes no permite llegar al nivel máximo.
     score *= min(1.0, 0.4 + 0.1 * len(habit_scores))
 
     idx = 0
@@ -518,7 +524,6 @@ def atomo_profile(period, db=None):
         "next_level": next_name,
         "hints": hints[:2],
     }
-
 
 def render_atomo_profile(profile):
     pct = round(profile["progress"] * 100)
