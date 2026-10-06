@@ -110,6 +110,32 @@ def authenticate(username, password):
             return (row[0], row[3]), None
     return None, 'Usuario o contraseña incorrectos.'
 
+def reset_owner_password(recovery_code, username, password, confirmation):
+    """Recupera el único acceso usando el código privado del alojamiento."""
+    expected = os.getenv('ATOMO_SETUP_TOKEN', '')
+    if len(expected) < 32:
+        raise ValueError('Falta configurar el código de recuperación en el servidor.')
+    if len(password) < 12 or len(password) > 256 or password != confirmation:
+        raise ValueError('La contraseña debe tener entre 12 y 256 caracteres y coincidir en ambos campos.')
+    with security_db() as c:
+        if not claim_attempt(c, time.time()):
+            raise ValueError('Demasiados intentos. Esperá unos minutos antes de volver a probar.')
+        row = c.execute('SELECT usuario FROM propietario WHERE id=1').fetchone()
+        if not row:
+            return None
+        if not hmac.compare_digest(username.strip().encode(), row[0].encode()):
+            return None
+        if not hmac.compare_digest(recovery_code.encode(), expected.encode()):
+            return None
+        salt = secrets.token_bytes(32)
+        version = secrets.token_hex(24)
+        c.execute(
+            'UPDATE propietario SET salt=?,digest=?,version=? WHERE id=1',
+            (salt, password_digest(password, salt), version),
+        )
+        c.execute('DELETE FROM intentos')
+    return username.strip(), version
+
 
 def valid_session(state, now=None):
     record = state.get('_private_access')
@@ -144,7 +170,7 @@ def require_private_access():
     if not web_private():
         return
     if st.session_state.pop('_clear_access_form', False):
-        for key in ['access_user','access_password','setup_token','setup_user','setup_password','setup_confirmation']:
+        for key in ['access_user','access_password','setup_token','setup_user','setup_password','setup_confirmation','reset_token','reset_user','reset_password','reset_confirmation']:
             st.session_state.pop(key, None)
     if valid_session(st.session_state):
         return
@@ -190,5 +216,27 @@ def require_private_access():
                 st.rerun()
             else:
                 st.error(error)
+
+        with st.expander('Olvidé mi contraseña'):
+            st.caption('Usá el código de recuperación que guardaste en Secrets. Tus datos financieros no se modifican.')
+            with st.form('private_reset'):
+                recovery = st.text_input('Código de recuperación', type='password', key='reset_token')
+                reset_user = st.text_input('Tu usuario', key='reset_user', max_chars=80)
+                reset_password = st.text_input('Nueva contraseña', type='password', key='reset_password')
+                reset_confirmation = st.text_input('Repetí la nueva contraseña', type='password', key='reset_confirmation')
+                reset_submit = st.form_submit_button('Cambiar contraseña', width='stretch')
+            if reset_submit:
+                try:
+                    result = reset_owner_password(recovery, reset_user, reset_password, reset_confirmation)
+                    if result is None:
+                        st.error('Usuario o código de recuperación incorrectos.')
+                    else:
+                        now = time.time()
+                        st.session_state._private_access = {'user':result[0], 'version':result[1], 'issued':now}
+                        st.session_state._private_access_checked_at = now
+                        st.session_state._clear_access_form = True
+                        st.rerun()
+                except ValueError as e:
+                    st.error(str(e))
     st.caption('Espacio privado de un único propietario. No hay registro público.')
     st.stop()
