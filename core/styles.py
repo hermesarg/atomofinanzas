@@ -140,6 +140,27 @@ def apply_styles():
         .electro-svg { height: 95px; }
     }
     
+    .period-card {
+        border:1px solid rgba(255,138,31,.28);
+        background:rgba(255,138,31,.07);
+        border-radius:14px;
+        padding:.55rem .8rem;
+        margin:.15rem 0 .7rem 0;
+        font-size:.9rem;
+    }
+
+    .st-key-main_Electro button {
+        border-color:rgba(255,138,31,.45) !important;
+        box-shadow:inset 0 0 0 1px rgba(255,138,31,.08);
+    }
+    .st-key-home_electro_card {
+        border:1px solid rgba(255,138,31,.22);
+        border-radius:18px;
+        padding:.7rem .9rem;
+        margin:.7rem 0;
+        background:rgba(255,138,31,.045);
+    }
+
     .help-card {
         border-left:4px solid var(--at-orange);
         background:rgba(255,138,31,.065);
