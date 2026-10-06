@@ -142,21 +142,32 @@ def _expected_start(today, mode, value):
 
 
 def ensure_active_period(db, today=None):
+    """Mantiene el período actual hasta su cierre; nunca reinterpreta el pasado."""
     if not setup_complete(db):
         return None
     today = today or local_today()
     mode = get_config("periodo_modo", "calendar", db)
     active = get_config("periodo_activo", "", db)
 
+    if active:
+        with con(db) as c:
+            row = c.execute(
+                "SELECT inicio,fin FROM periodos_financieros WHERE periodo=?",
+                (active,),
+            ).fetchone()
+        if row:
+            finish = date.fromisoformat(row[1]) if row[1] else None
+            if finish is None or today <= finish:
+                return active
+            if mode in {"calendar", "salary_fixed", "salary_business"}:
+                return start_period(finish + timedelta(days=1), db, mode=mode)
+            return active
+
     if mode in {"calendar", "salary_fixed", "salary_business"}:
         value = int(get_config("periodo_dia", 1, db) or 1)
         start = _expected_start(today, mode, value)
-        expected = _period_key(start)
-        if active != expected:
-            active = start_period(start, db, mode=mode)
-    elif not active:
-        return None
-    return active
+        return start_period(start, db, mode=mode)
+    return None
 
 
 def active_period(db):
@@ -195,6 +206,26 @@ def period_for_date(value, db):
     return value[:7]
 
 
+def _next_boundary_after(anchor, mode, value):
+    """Primer inicio válido estrictamente posterior a anchor."""
+    if mode == "calendar":
+        y, m = _month_shift(anchor.year, anchor.month, 1)
+        return date(y, m, 1)
+    if mode == "salary_fixed":
+        candidate = _fixed_day(anchor.year, anchor.month, value)
+        if candidate > anchor:
+            return candidate
+        y, m = _month_shift(anchor.year, anchor.month, 1)
+        return _fixed_day(y, m, value)
+    if mode == "salary_business":
+        candidate = _business_day(anchor.year, anchor.month, value)
+        if candidate > anchor:
+            return candidate
+        y, m = _month_shift(anchor.year, anchor.month, 1)
+        return _business_day(y, m, value)
+    return None
+
+
 def save_preference(mode, value, db):
     if mode not in MODE_LABELS:
         raise ValueError("Elegí un criterio de período válido.")
@@ -205,15 +236,44 @@ def save_preference(mode, value, db):
             raise ValueError("El día elegido no es válido.")
         set_config("periodo_dia", value, db)
     else:
+        value = None
         set_config("periodo_dia", "", db)
+
+    active_key = get_config("periodo_activo", "", db)
     set_config("periodo_modo", mode, db)
 
-    # Los cambios de criterio no reescriben períodos anteriores.
-    if mode in {"calendar", "salary_fixed", "salary_business"}:
-        start = _expected_start(local_today(), mode, int(value or 1))
-        start_period(start, db, mode=mode)
-    elif not get_config("periodo_activo", "", db):
-        start_period(local_today(), db, mode=mode)
+    if not active_key:
+        if mode in {"calendar", "salary_fixed", "salary_business"}:
+            start = _expected_start(local_today(), mode, int(value or 1))
+            start_period(start, db, mode=mode)
+        else:
+            start_period(local_today(), db, mode=mode)
+        return
+
+    # Cambiar la preferencia nunca modifica períodos ya cerrados. El período
+    # actualmente abierto conserva su etiqueta/criterio y se cierra justo antes
+    # del primer inicio válido del nuevo criterio.
+    with con(db) as c:
+        row = c.execute(
+            "SELECT inicio,fin FROM periodos_financieros WHERE periodo=?",
+            (active_key,),
+        ).fetchone()
+    if not row:
+        return
+
+    if mode in {"manual", "salary_manual"}:
+        with con(db) as c:
+            c.execute("UPDATE periodos_financieros SET fin=NULL WHERE periodo=?", (active_key,))
+        return
+
+    anchor = date.fromisoformat(row[1]) if row[1] else local_today()
+    next_start = _next_boundary_after(anchor, mode, int(value or 1))
+    if next_start:
+        with con(db) as c:
+            c.execute(
+                "UPDATE periodos_financieros SET fin=? WHERE periodo=?",
+                ((next_start - timedelta(days=1)).isoformat(), active_key),
+            )
 
 
 def render_setup(db):
