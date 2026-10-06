@@ -8,9 +8,10 @@ GROUPS = {
     'Pagos': [('Pagos', 'Registrar pago'), ('Movimientos', 'Ver historial completo')],
     'Ingresos': [('Ingresos', 'Registrar ingreso')],
     'Pendientes': [('Pendientes', 'Próximos pagos'), ('Tarjetas y cuotas', 'Tarjetas y cuotas'), ('Deudas', 'Deudas'), ('Proyección', 'Ver proyección')],
+    'Electro': [('Electro', 'Electro financiero')],
     'Más': [('Cuentas', 'Cuentas y rendimientos'), ('Inversiones', 'Inversiones'), ('Comparar rendimientos', 'Comparar rendimientos'), ('Preguntale a Átomo', 'Preguntale a Átomo'), ('Instituciones', 'Bancos y otras entidades'), ('Configuración', 'Ajustes')],
 }
-MAIN_ICONS = {'Inicio':'🏠', 'Pagos':'💸', 'Ingresos':'💰', 'Pendientes':'📅', 'Más':'☰'}
+MAIN_ICONS = {'Inicio':'🏠', 'Pagos':'💸', 'Ingresos':'💰', 'Pendientes':'📅', 'Electro':'⚡', 'Más':'☰'}
 MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 
@@ -21,7 +22,7 @@ def group_for_page(page):
 def activate(page):
     st.session_state.page = page
     if page in ['Pagos', 'Ingresos']:
-        st.session_state.pending_period = local_today().strftime('%Y-%m')
+        st.session_state.pending_period = st.session_state.get('_active_period_key', local_today().strftime('%Y-%m'))
         st.session_state['reset_' + ('pay' if page == 'Pagos' else 'income')] = True
 
 
