@@ -2,7 +2,7 @@
 
 **Las cuentas las hago yo. Las decisiones, vos.**
 
-Proyecto preparado para Streamlit Community Cloud privado y una base Turso de motor **libSQL**, en sus planes gratuitos. No se creó ningún servicio pago. Código alojado en el repositorio privado `hermesarg/atomofinanzas`. **Todavía no está desplegado:** falta configurar la base externa, activar el alojamiento y verificar la URL real.
+Proyecto preparado para Streamlit Community Cloud privado y una base Turso de motor **libSQL**, en sus planes gratuitos. No se creó ningún servicio pago. Código alojado en el repositorio privado `hermesarg/atomofinanzas`. La entrada personal es `app_cloud.py`; `app_demo.py` permite levantar una demostración pública separada con datos ficticios y una base temporal por sesión.
 
 La entrada para la web es `app_cloud.py`: obliga a acceso privado, guardado externo y horario argentino. `app.py` conserva el funcionamiento local con SQLite. No hay registro público de usuarios ni decisiones financieras automáticas. La IA es opcional; `OPENAI_API_KEY` permanece externa y no es necesaria para usar la beta.
 
@@ -27,7 +27,15 @@ Más → Ajustes → Mis respaldos permite descargar una base SQLite completa, c
 
 PC y web son registros independientes; no hay sincronización automática entre ambos. Después de importar, elegir la web para las cargas cotidianas. Los dispositivos conectados a la misma web consultan la misma base externa.
 
-Si se pierde la contraseña, el administrador puede usar `recuperar_acceso.py` desde una consola con `ATOMO_STORAGE=turso` y las credenciales externas. Otra vía, exclusiva para el propietario autenticado en el panel de Turso: borrar la fila de `propietario` y los `intentos`, conservando todas las tablas financieras; después activar de nuevo con el código privado. No borrar la base ni `acceso_meta`. Las sesiones anteriores quedan revocadas.
+Si se pierde la contraseña, la pantalla de ingreso ofrece **Olvidé mi contraseña**. Pide el usuario y el código privado `ATOMO_SETUP_TOKEN` del alojamiento, y genera una contraseña nueva sin tocar cuentas, movimientos, tarjetas ni inversiones. `recuperar_acceso.py` y el panel de Turso quedan como vías administrativas de emergencia.
+
+## Períodos financieros
+
+La web separa **fecha real** y **período financiero**. Al comenzar, el propietario puede elegir mes calendario, día fijo de cobro, número de día hábil, confirmación manual al cobrar el sueldo o inicio totalmente manual. Cada período guarda su propio inicio, fin y criterio; cambiar la preferencia sólo afecta ciclos futuros y no reescribe períodos ya cerrados. El encabezado muestra siempre cómo se está computando el período activo.
+
+## Demo pública
+
+Para pruebas de terceros, crear una **segunda app** en Streamlit desde el mismo repositorio y elegir `app_demo.py` como Main file path. No cargar los Secrets de Turso ni el token del propietario en esa app. Cada sesión recibe una SQLite temporal con datos ficticios; puede registrar, editar y navegar sin tocar la base personal. Un botón **Reiniciar demo** restaura los datos de prueba de esa sesión.
 
 ## Ejecución local y pruebas
 
