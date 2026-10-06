@@ -4,7 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 # Leer secrets antes de importar core.config. Nunca imprimir sus valores.
-for name in ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN', 'ATOMO_SETUP_TOKEN']:
+for name in ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN', 'ATOMO_SETUP_TOKEN', 'OPENAI_API_KEY']:
     try:
         value = st.secrets.get(name)
     except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
