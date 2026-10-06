@@ -62,6 +62,12 @@ def _criterion_detail(mode, value=None):
 
 def _insert_period(start, end, mode, detail, db):
     key = _period_key(start)
+    with read_con(db) as c:
+        existing = c.execute("SELECT inicio FROM periodos_financieros WHERE periodo=?", (key,)).fetchone()
+    if existing and existing[0] != start.isoformat():
+        raise ValueError(
+            f"Ya existe el período {key} con inicio {existing[0]}. Cerralo o elegí una fecha de otro mes."
+        )
     with con(db) as c:
         c.execute(
             """INSERT INTO periodos_financieros(periodo,inicio,fin,criterio,detalle,creado_en)
@@ -246,8 +252,6 @@ def save_preference(mode, value, db):
         if mode in {"calendar", "salary_fixed", "salary_business"}:
             start = _expected_start(local_today(), mode, int(value or 1))
             start_period(start, db, mode=mode)
-        else:
-            start_period(local_today(), db, mode=mode)
         return
 
     # Cambiar la preferencia nunca modifica períodos ya cerrados. El período
@@ -300,6 +304,7 @@ def render_setup(db):
 
     mode = "calendar"
     value = None
+    initial_start = None
     if choice == "Desde mi sueldo":
         subtype = st.radio(
             "¿Cómo querés indicar el cobro?",
@@ -315,14 +320,22 @@ def render_setup(db):
             st.caption("Por ahora cuenta lunes a viernes; no descuenta feriados nacionales.")
         else:
             mode = "salary_manual"
-            st.caption("Cuando registres o confirmes el sueldo, vas a poder iniciar el nuevo período.")
+            st.caption("Indicá cuándo empezó tu período actual (normalmente, la fecha de tu último sueldo).")
+            initial_start = st.date_input("Inicio del período actual", value=local_today(), key="setup_salary_manual_start")
     elif choice == "Manual":
         mode = "manual"
+        initial_start = st.date_input("¿Cuándo empezó tu período actual?", value=local_today(), key="setup_manual_start")
 
     if st.button("Guardar y empezar", type="primary", width="stretch"):
-        save_preference(mode, value, db)
-        st.session_state.pending_period = get_config("periodo_activo", local_today().strftime("%Y-%m"), db)
-        st.rerun()
+        try:
+            save_preference(mode, value, db)
+            if mode in {"manual", "salary_manual"} and not get_config("periodo_activo", "", db):
+                detail = "Iniciado al configurar el ciclo de sueldo." if mode == "salary_manual" else "Iniciado manualmente al configurar Átomo."
+                start_period(initial_start or local_today(), db, mode=mode, detail=detail)
+            st.session_state.pending_period = get_config("periodo_activo", local_today().strftime("%Y-%m"), db)
+            st.rerun()
+        except ValueError as e:
+            st.error(str(e))
 
 
 def render_status(db, compact=False):
