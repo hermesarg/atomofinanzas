@@ -209,6 +209,16 @@ def period_for_date(value, db):
         ).fetchone()
     if row:
         return row[0]
+
+    # Para criterios automáticos también podemos ubicar fechas futuras sin
+    # crear por adelantado todos los períodos.
+    mode = get_config("periodo_modo", "", db)
+    if mode in {"calendar", "salary_fixed", "salary_business"}:
+        target = date.fromisoformat(value)
+        setting = int(get_config("periodo_dia", 1, db) or 1)
+        expected = _expected_start(target, mode, setting)
+        if expected:
+            return _period_key(expected)
     return value[:7]
 
 
