@@ -52,6 +52,20 @@ def detail_widget():
         if st.session_state.page == 'Movimientos' and st.button('Volver a registrar un pago', key='back_to_payments'):
             go('Pagos')
         return
+    if group == 'Más':
+        st.caption('Dentro de Más')
+        for row_start in range(0, len(items), 2):
+            cols = st.columns(2)
+            for col, (page, label) in zip(cols, items[row_start:row_start + 2]):
+                with col:
+                    if st.button(
+                        label,
+                        key='detail_more_' + page,
+                        width='stretch',
+                        type='primary' if st.session_state.page == page else 'secondary',
+                    ):
+                        go(page)
+        return
     if len(items) > 1:
         st.session_state.section_detail = st.session_state.page
         labels = dict(items)
