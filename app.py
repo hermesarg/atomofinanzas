@@ -65,16 +65,14 @@ def render_workspace():
         st.caption("Las cuentas las hago yo. Las decisiones, vos.")
         menu_widget("sidebar_group", "Secciones")
         period = period_selector(db)
-        try:
-            from core.periods import ensure_active_period
-            active_key = ensure_active_period(db)
-            if active_key:
-                st.session_state._active_period_key = active_key
-        except sqlite3.Error:
-            pass
         st.caption("Tus datos se guardan en tu espacio privado." if web_private() else ("Demo temporal: se reinicia en una nueva sesión." if st.session_state.demo_mode else "Tus datos se guardan en esta PC."))
         if web_private():
             st.button("Cerrar sesión", key="private_logout", on_click=logout)
+        elif st.session_state.demo_mode:
+            if st.button("Reiniciar demo", key="reset_public_demo"):
+                from core.database import reset_demo
+                reset_demo(db)
+                st.rerun()
     
     # Header
     with st.container(key="brand_header"):
@@ -99,9 +97,8 @@ def render_workspace():
         menu_widget("mobile_group")
     detail_widget()
 
-    if not st.session_state.demo_mode:
-        from core.periods import render_status
-        render_status(db, compact=True)
+    from core.periods import render_status
+    render_status(db, compact=True)
 
     page = st.session_state.page
     
