@@ -1,0 +1,13 @@
+[
+  "Alta privada con token válido; inválido bloqueado; sin SQLite financiero antes de autenticar",
+  "Importación inicial revisada; no se vuelve a ofrecer después de importar",
+  "Navegador anónimo no ve cuentas, menú, pendientes ni importación",
+  "Light: todas las pantallas recorridas en Chromium con base externa real",
+  "Dark: todas las pantallas recorridas en Chromium con base externa real",
+  "Light: pago, ingreso y tasa desde celular con persistencia",
+  "Dark: pago, ingreso y tasa desde celular con persistencia",
+  "Backup descargable íntegro con todos los movimientos y sin datos de acceso",
+  "Eliminación total del disco del servidor web: acceso e historial conservados en la base externa",
+  "Recarga y reinicio del servidor conservan propietario, saldos, movimientos y tasa",
+  "Cerrar sesión bloquea de nuevo todas las pantallas"
+]

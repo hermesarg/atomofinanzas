@@ -1,0 +1,15 @@
+datos/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.db-*
+*.sqlite*
+*.log
+importacion/
+secrets.toml
+docs/qa_historial/
+
