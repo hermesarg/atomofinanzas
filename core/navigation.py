@@ -61,17 +61,27 @@ def detail_widget():
 
 def period_selector(db):
     from core.database import dfq
+    from core.periods import ensure_active_period
     today = local_today()
+    active = ensure_active_period(db)
+    if active:
+        st.session_state._active_period_key = active
+
     if 'pending_period' in st.session_state:
-        year, month = map(int, st.session_state.pop('pending_period').split('-'))
+        pending = st.session_state.pop('pending_period')
+        if pending and len(pending) >= 7:
+            year, month = map(int, pending[:7].split('-'))
+            st.session_state.period_year, st.session_state.period_month = year, month
+    elif 'period_year' not in st.session_state or 'period_month' not in st.session_state:
+        base = active or today.strftime('%Y-%m')
+        year, month = map(int, base[:7].split('-'))
         st.session_state.period_year, st.session_state.period_month = year, month
-    st.session_state.setdefault('period_year', today.year)
-    st.session_state.setdefault('period_month', today.month)
+
     years = list(range(2000, today.year + 11))
     recorded = dfq('SELECT DISTINCT CAST(substr(COALESCE(periodo_registro,fecha),1,4) AS INTEGER) AS y FROM movimientos', db=db)
     years = sorted(set(years + [int(y) for y in recorded.y if y and 1 <= y <= 9999] + [st.session_state.period_year]))
-    with st.expander('Ver otro mes', expanded=False):
+    with st.expander('Ver otro período', expanded=False):
         a, b = st.columns([1.6, 1])
-        month = a.selectbox('Mes', list(range(1,13)), format_func=lambda m: MONTHS[m-1], key='period_month')
+        month = a.selectbox('Período', list(range(1,13)), format_func=lambda m: MONTHS[m-1], key='period_month')
         year = b.selectbox('Año', years, key='period_year')
     return f'{year:04d}-{month:02d}'
