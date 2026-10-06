@@ -361,8 +361,15 @@ def render_electro(e):
           <div class="electro-title">{e['state']}</div>
           <div class="electro-state">{explanation}</div>
           <svg class="electro-svg" viewBox="0 0 760 105" preserveAspectRatio="none" aria-label="Electro financiero">
-            <line x1="0" y1="59" x2="760" y2="59" stroke="rgba(120,120,120,.16)" stroke-width="1"/>
-            <polyline points="{pts}" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="atomoElectroGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ff8a1f"/>
+                <stop offset="52%" stop-color="#ffad55"/>
+                <stop offset="100%" stop-color="#ffd08b"/>
+              </linearGradient>
+            </defs>
+            <line class="electro-baseline" x1="0" y1="59" x2="760" y2="59" stroke-width="1"/>
+            <polyline class="electro-wave" points="{pts}" fill="none" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
           </svg>
           <div class="electro-grid">
             <div class="electro-mini">
