@@ -50,10 +50,13 @@ def render_workspace():
 
     db = current_db()
     if not st.session_state.demo_mode:
-        from core.periods import setup_complete, render_setup
+        from core.periods import setup_complete, render_setup, save_preference
         if not setup_complete(db):
-            render_setup(db)
-            return
+            if web_private():
+                render_setup(db)
+                return
+            # La app local conserva el comportamiento histórico: mes calendario.
+            save_preference("calendar", None, db)
 
     if st.session_state.demo_mode:
         st.markdown('<div class="demo-banner">🧪 <b>Átomo Demo</b> · datos ficticios y espacio temporal. Podés probar sin tocar información real.</div>', unsafe_allow_html=True)
