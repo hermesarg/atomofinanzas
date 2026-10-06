@@ -72,7 +72,7 @@ def render(period, db):
         st.info(watch)
 
     with right:
-        yld = yield_snapshot(db, 30)
+        yld = yield_snapshot(db, 30, balances=e.get("_balances"))
         st.subheader("Caja que genera rendimiento")
         c1, c2 = st.columns(2)
         c1.metric("Saldo remunerado", money(yld["remunerated_balance"]))
@@ -82,7 +82,7 @@ def render(period, db):
 
     st.markdown("---")
     st.subheader("Resumen rápido")
-    summary, _ = period_summary(period, db)
+    summary = e.get("_summary") or period_summary(period, db)[0]
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Ingresos", money(summary["ingresos"]))
     c2.metric("Gastos pagados", money(summary["gastos"]))
