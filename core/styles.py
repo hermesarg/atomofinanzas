@@ -80,12 +80,12 @@ def apply_styles():
     
     /* Electro financiero */
     .electro-card {
-        border: 1px solid rgba(128,128,128,.20);
+        border: 1px solid rgba(255,138,31,.24);
         border-radius: 20px;
         padding: .9rem 1rem;
         margin-bottom: .9rem;
         background: var(--secondary-background-color);
-        box-shadow: 0 2px 12px rgba(0,0,0,.035);
+        box-shadow: 0 8px 26px rgba(0,0,0,.045), inset 0 0 0 1px rgba(255,194,122,.035);
     }
     .electro-title {
         font-family: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif;
@@ -104,6 +104,13 @@ def apply_styles():
         height: 115px;
         display:block;
         margin:.25rem 0 .4rem 0;
+        filter: drop-shadow(0 0 4px rgba(255,138,31,.18));
+    }
+    .electro-baseline {
+        stroke: rgba(128,128,128,.16);
+    }
+    .electro-wave {
+        stroke: url(#atomoElectroGradient);
     }
     .electro-grid {
         display:grid;
@@ -112,9 +119,10 @@ def apply_styles():
         margin-top:.7rem;
     }
     .electro-mini {
-        border:1px solid rgba(128,128,128,.16);
+        border:1px solid rgba(255,138,31,.15);
         border-radius:14px;
         padding:.62rem;
+        background:rgba(255,138,31,.025);
     }
     .electro-mini-title {
         font-weight:750;
@@ -149,10 +157,6 @@ def apply_styles():
         font-size:.9rem;
     }
 
-    .st-key-main_Electro button {
-        border-color:rgba(255,138,31,.45) !important;
-        box-shadow:inset 0 0 0 1px rgba(255,138,31,.08);
-    }
     .st-key-home_electro_card {
         border:1px solid rgba(255,138,31,.22);
         border-radius:18px;
