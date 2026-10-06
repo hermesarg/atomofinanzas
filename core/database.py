@@ -8,12 +8,22 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 import calendar
+from pathlib import Path
+import secrets
+import tempfile
 import pandas as pd
 import streamlit as st
 from core.config import BACKUP_DIR, BASE_INSTITUTIONS, DEMO_DB, LIVE_DB
 
 def current_db():
-    return DEMO_DB if st.session_state.get("demo_mode", False) else LIVE_DB
+    if st.session_state.get("demo_mode", False):
+        if "_demo_db_path" not in st.session_state:
+            token = secrets.token_hex(8)
+            path = Path(tempfile.gettempdir()) / f"atomo_demo_{token}.db"
+            st.session_state._demo_db_path = str(path)
+            reset_demo(path)
+        return Path(st.session_state._demo_db_path)
+    return LIVE_DB
 
 @contextmanager
 def con(db=None):
@@ -162,6 +172,16 @@ def _initialize_schema(db):
         )""")
 
         c.execute("""
+        CREATE TABLE IF NOT EXISTS periodos_financieros(
+            periodo TEXT PRIMARY KEY,
+            inicio TEXT NOT NULL,
+            fin TEXT,
+            criterio TEXT NOT NULL,
+            detalle TEXT,
+            creado_en TEXT NOT NULL
+        )""")
+
+        c.execute("""
         CREATE TABLE IF NOT EXISTS instituciones(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT NOT NULL,
@@ -281,11 +301,12 @@ def _initialize_schema(db):
         for k, v in defaults.items():
             c.execute("INSERT OR IGNORE INTO config(clave,valor) VALUES (?,?)", (k, v))
 
-def reset_demo():
-    if DEMO_DB.exists():
-        DEMO_DB.unlink()
-    init_db(DEMO_DB)
-    seed_demo()
+def reset_demo(db=None):
+    db = Path(db or DEMO_DB)
+    if db.exists():
+        db.unlink()
+    init_db(db)
+    seed_demo(db)
 
 def get_config(key, default, db=None):
     with con(db) as c:
@@ -310,9 +331,9 @@ def inst_id(name, db=None):
         row = c.execute("SELECT id FROM instituciones WHERE nombre=?", (name,)).fetchone()
     return row[0] if row else None
 
-def seed_demo():
+def seed_demo(db=None):
     from .finance import add_months
-    db = DEMO_DB
+    db = Path(db or DEMO_DB)
     today = local_today()
     period = today.strftime("%Y-%m")
     first = today.replace(day=1)
@@ -422,6 +443,14 @@ def seed_demo():
             VALUES (?,?,?,?,?,?,?,?,?,?,1)
             """, (cat, ins, instr, tt, rate, liq, risk, cur, "Dato ficticio", today.isoformat()))
 
+        c.execute("INSERT OR REPLACE INTO config(clave,valor) VALUES ('periodo_modo','calendar')")
+        c.execute("INSERT OR REPLACE INTO config(clave,valor) VALUES ('periodo_activo',?)", (period,))
+        last = calendar.monthrange(today.year, today.month)[1]
+        c.execute(
+            "INSERT OR REPLACE INTO periodos_financieros(periodo,inicio,fin,criterio,detalle,creado_en) VALUES (?,?,?,?,?,?)",
+            (period, first.isoformat(), first.replace(day=last).isoformat(), "Mes calendario", "Dato ficticio del modo demo para períodos.", now),
+        )
+
 # =========================================================
 # DATA HELPERS
 # =========================================================
@@ -525,16 +554,45 @@ def account_balance(row, db=None):
     return bal
 
 def balances_df(db=None):
+    """Saldos de todas las cuentas con una sola lectura de movimientos."""
     acc = accounts_df(db)
+    if acc.empty:
+        return pd.DataFrame(columns=["id","institucion","cuenta","tipo","moneda","saldo","liquidez_operativa","genera_rendimiento","tasa_anual","tipo_tasa","fecha_tasa","fuente_tasa"])
+    earliest = min(str(x) for x in acc["fecha_saldo_base"] if x)
+    moves = dfq("""
+        SELECT fecha,tipo,monto,cuenta_origen_id,cuenta_destino_id
+        FROM movimientos
+        WHERE fecha>=? AND fecha<=date('now','localtime')
+          AND COALESCE(estado,'activo')='activo'
+          AND (COALESCE(importado,0)=0 OR COALESCE(impacta_caja,1)=1)
+          AND (cuenta_origen_id IS NOT NULL OR cuenta_destino_id IS NOT NULL)
+    """, (earliest,), db=db)
     rows = []
     for _, r in acc.iterrows():
+        aid = int(r["id"])
+        base = float(r["saldo_base"] or 0)
+        since = str(r["fecha_saldo_base"])
+        saldo = base
+        if not moves.empty:
+            relevant = moves[(moves["fecha"] >= since) & ((moves["cuenta_origen_id"] == aid) | (moves["cuenta_destino_id"] == aid))]
+            for _, m in relevant.iterrows():
+                amt = float(m["monto"])
+                if m["tipo"] == "Ingreso" and m["cuenta_destino_id"] == aid:
+                    saldo += amt
+                elif m["tipo"] == "Gasto" and m["cuenta_origen_id"] == aid:
+                    saldo -= amt
+                elif m["tipo"] == "Transferencia":
+                    if m["cuenta_origen_id"] == aid:
+                        saldo -= amt
+                    if m["cuenta_destino_id"] == aid:
+                        saldo += amt
         rows.append({
-            "id": int(r["id"]),
+            "id": aid,
             "institucion": r["institucion"],
             "cuenta": r["nombre"],
             "tipo": r["tipo_cuenta"],
             "moneda": r["moneda"],
-            "saldo": account_balance(r, db),
+            "saldo": saldo,
             "liquidez_operativa": r.get("liquidez_operativa"),
             "genera_rendimiento": int(r.get("genera_rendimiento", 0) or 0),
             "tasa_anual": float(r.get("tasa_anual", 0) or 0),
@@ -547,26 +605,33 @@ def balances_df(db=None):
 def insert_movement(fecha, tipo, descripcion, categoria, monto,
                     origen=None, destino=None, moneda="ARS", notas="",
                     grupo_cuotas=None, cuota_actual=None, cuotas_total=None,
-                    subtipo=None, db=None):
+                    subtipo=None, db=None, periodo_registro=None):
     if not descripcion.strip() or not math.isfinite(float(monto)) or float(monto) <= 0:
         raise ValueError("Descripción y monto positivo son obligatorios.")
     if tipo == "Transferencia" and (not origen or not destino or origen == destino):
         raise ValueError("Una transferencia propia requiere dos cuentas distintas.")
     if not accounts_match_currency([origen, destino], moneda, db):
         raise ValueError("La moneda del movimiento debe coincidir con sus cuentas.")
+    fecha_texto = fecha.isoformat() if hasattr(fecha, "isoformat") else str(fecha)
+    if periodo_registro is None:
+        try:
+            from core.periods import period_for_date
+            periodo_registro = period_for_date(fecha_texto, db)
+        except (sqlite3.Error, ValueError):
+            periodo_registro = fecha_texto[:7]
     with con(db) as c:
         c.execute("""
         INSERT INTO movimientos(
             fecha,tipo,descripcion,categoria,monto,cuenta,notas,creado_en,
             cuenta_origen_id,cuenta_destino_id,moneda,impacta_caja,
-            grupo_cuotas,cuota_actual,cuotas_total,estado,subtipo
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'activo',?)
+            grupo_cuotas,cuota_actual,cuotas_total,periodo_registro,estado,subtipo
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'activo',?)
         """, (
-            fecha.isoformat() if hasattr(fecha, "isoformat") else str(fecha),
+            fecha_texto,
             tipo, descripcion.strip(), categoria, float(monto), None, notas.strip(),
             local_now().isoformat(timespec="seconds"),
             origen, destino, moneda, 0 if tipo == "Transferencia" else 1,
-            grupo_cuotas, cuota_actual, cuotas_total, subtipo,
+            grupo_cuotas, cuota_actual, cuotas_total, periodo_registro, subtipo,
         ))
 
 
