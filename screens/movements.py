@@ -12,7 +12,7 @@ def render(period, db):
     render_history_notice(period, db)
     from core.history import render_cycle_summary
     render_cycle_summary(period, db)
-    st.caption(f"Viendo movimientos de {period}. La fecha de cada carga determina dónde aparece.")
+    st.caption(f"Viendo movimientos de {period}. Cada carga conserva su fecha real y también el período financiero asignado.")
     if "movement_saved" in st.session_state:
         st.success(st.session_state.pop("movement_saved"))
     with st.expander("Carga avanzada (opcional)", expanded=False):
@@ -79,8 +79,10 @@ def render(period, db):
                         insert_movement(d, "Transferencia", desc, "Transferencia", amt, ori, dst, cur, notes, subtipo="Entre mis cuentas", db=db)
                     else:
                         insert_movement(d, typ, desc, cat, amt, ori, dst, cur, notes, db=db)
-                    st.session_state.pending_period = d.strftime("%Y-%m")
-                    st.session_state.movement_saved = f"Guardado: {desc.strip()} · {money(amt,cur,True)}. Ahora estás viendo {d:%Y-%m}."
+                    from core.periods import period_for_date
+                    saved_period = period_for_date(d, db)
+                    st.session_state.pending_period = saved_period
+                    st.session_state.movement_saved = f"Guardado: {desc.strip()} · {money(amt,cur,True)}. Ahora estás viendo {saved_period}."
                     st.rerun()
     
     mov = movements_df(period, db)
