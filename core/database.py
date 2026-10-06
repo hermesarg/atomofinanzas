@@ -362,12 +362,12 @@ def seed_demo(db=None):
     with con(db) as c:
         # cuentas
         demo_accounts = [
-            ("Banco Provincia del Neuquén", "Cuenta sueldo", "Caja de ahorro ARS", "ARS", 2450000),
-            ("Banco Macro", "Caja ahorro", "Caja de ahorro ARS", "ARS", 620000),
-            ("Mercado Pago", "Billetera diaria", "Billetera", "ARS", 315000),
-            ("Brubank", "Dólares", "Caja de ahorro USD", "USD", 780),
-            ("InvertirOnline (IOL)", "Comitente", "Cuenta comitente", "ARS", 1450000),
-            ("Cocos Capital", "Inversiones", "Cuenta de inversión", "ARS", 480000),
+            ("Banco de la Nación Argentina", "Cuenta sueldo", "Caja de ahorro ARS", "ARS", 1250000),
+            ("Brubank", "Caja ahorro", "Caja de ahorro ARS", "ARS", 340000),
+            ("Mercado Pago", "Billetera diaria", "Billetera", "ARS", 210000),
+            ("Banco Santander Argentina", "Dólares", "Caja de ahorro USD", "USD", 520),
+            ("InvertirOnline (IOL)", "Comitente", "Cuenta comitente", "ARS", 720000),
+            ("Cocos Capital", "Inversiones", "Cuenta de inversión", "ARS", 260000),
         ]
         for institution, name, t, cur, bal in demo_accounts:
             iid = inst_id(institution, db)
@@ -386,9 +386,9 @@ def seed_demo(db=None):
 
         # tarjetas
         for institution, name, close, due, limit_ in [
-            ("Banco Patagonia", "Visa Patagonia", 20, 8, 2500000),
-            ("Banco Macro", "Visa Macro", 24, 10, 1800000),
-            ("Mercado Pago", "Crédito MP", 18, 5, 900000),
+            ("Banco de la Nación Argentina", "Visa Nación", 20, 8, 1500000),
+            ("Banco Santander Argentina", "Visa Santander", 24, 10, 1200000),
+            ("Mercado Pago", "Crédito MP", 18, 5, 600000),
         ]:
             c.execute("""
             INSERT INTO tarjetas(institucion_id,nombre,cierre_dia,vencimiento_dia,limite,moneda,activa,notas,creada_en)
@@ -400,16 +400,16 @@ def seed_demo(db=None):
 
     # movimientos del mes demo
     demo_moves = [
-        (2, "Ingreso", "Sueldo", "Sueldo / ingreso", 5100000, None, amap["Cuenta sueldo"]),
-        (3, "Gasto", "Alquiler", "Vivienda / alquiler", 1200000, amap["Cuenta sueldo"], None),
-        (5, "Gasto", "Compra supermercado", "Supermercado / compra del mes", 310000, amap["Cuenta sueldo"], None),
-        (7, "Gasto", "Combustible", "Combustible / transporte", 125000, amap["Billetera diaria"], None),
-        (9, "Gasto", "Cena", "Comida afuera", 72000, amap["Billetera diaria"], None),
-        (11, "Gasto", "Café y kiosco", "Gasto hormiga", 38000, amap["Billetera diaria"], None),
-        (13, "Gasto", "Internet + celular", "Servicios", 89000, amap["Cuenta sueldo"], None),
-        (15, "Gasto", "Gimnasio", "Salud", 65000, amap["Cuenta sueldo"], None),
-        (16, "Transferencia", "Transferencia a IOL", "Transferencia", 450000, amap["Cuenta sueldo"], amap["Comitente"]),
-        (19, "Gasto", "Ropa", "Ropa", 125000, amap["Caja ahorro"], None),
+        (2, "Ingreso", "Sueldo", "Sueldo / ingreso", 2400000, None, amap["Cuenta sueldo"]),
+        (3, "Gasto", "Alquiler", "Vivienda / alquiler", 650000, amap["Cuenta sueldo"], None),
+        (5, "Gasto", "Compra supermercado", "Supermercado / compra del mes", 180000, amap["Cuenta sueldo"], None),
+        (7, "Gasto", "Transporte", "Combustible / transporte", 78000, amap["Billetera diaria"], None),
+        (9, "Gasto", "Cena", "Comida afuera", 48000, amap["Billetera diaria"], None),
+        (11, "Gasto", "Café y kiosco", "Gasto hormiga", 21000, amap["Billetera diaria"], None),
+        (13, "Gasto", "Internet + celular", "Servicios", 56000, amap["Cuenta sueldo"], None),
+        (15, "Gasto", "Actividad física", "Salud", 42000, amap["Cuenta sueldo"], None),
+        (16, "Transferencia", "Transferencia a inversión", "Transferencia", 220000, amap["Cuenta sueldo"], amap["Comitente"]),
+        (19, "Gasto", "Ropa", "Ropa", 70000, amap["Caja ahorro"], None),
     ]
     for day, typ, desc, cat, amt, ori, dst in demo_moves:
         d = first.replace(day=min(day, calendar.monthrange(first.year, first.month)[1]))
@@ -417,9 +417,9 @@ def seed_demo(db=None):
 
     # compromisos futuros
     for offset, desc, amount in [
-        (3, "Resumen Visa Patagonia", 540000),
-        (7, "Crédito MP", 210000),
-        (10, "Visa Macro", 185000),
+        (3, "Resumen Visa Nación", 260000),
+        (7, "Crédito MP", 115000),
+        (10, "Visa Santander", 140000),
     ]:
         d = today + timedelta(days=offset)
         insert_movement(d, "Compromiso", desc, "Tarjetas", amount, None, None, "ARS", "Demo", db=db)
@@ -430,7 +430,7 @@ def seed_demo(db=None):
         INSERT INTO deudas(institucion_id,nombre,saldo_pendiente,cuota,cuotas_restantes,proximo_vencimiento,moneda,tasa_info,activa,notas,creada_en)
         VALUES (?,?,?,?,?,?,? ,?,1,?,?)
         """, (
-            inst_id("Banco Macro", db), "Préstamo personal", 2380000, 395000, 7,
+            inst_id("Banco Santander Argentina", db), "Préstamo personal", 980000, 165000, 7,
             (today + timedelta(days=12)).isoformat(), "ARS", "Tasa fija", "Ejemplo", now
         ))
 
