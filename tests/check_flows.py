@@ -116,8 +116,8 @@ page(app,'Instituciones'); text(app,'Buscar','['); app.run(); check(app)
 text(app,'Nombre *','Institución QA'); click(app,'Agregar'); click(app,'Agregar'); assert app.warning
 page(app,'Configuración'); text(app,'Colchón objetivo ARS *','123.456'); click(app,'Guardar configuración')
 assert query("select valor from config where clave='colchon_objetivo_ars'").iloc[0,0]=='123456.0'
-page(app,'Proyección'); pick(app,'Mes',1); pick(app,'Año',2025); app.run(); check(app)
-pick(app,'Mes',date.today().month); pick(app,'Año',date.today().year); app.run(); check(app)
+page(app,'Proyección'); pick(app,'Período',1); pick(app,'Año',2025); app.run(); check(app)
+pick(app,'Período',date.today().month); pick(app,'Año',date.today().year); app.run(); check(app)
 # New Streamlit session, same SQLite data
 again=new_app(); check(again); assert len(query('select * from cuentas'))==4
 assert parse_amount('1.234.567,89')==1234567.89 and money(1234.56,'ARS',True)=='$ 1.234,56'
