@@ -54,6 +54,15 @@ def register(income, period, db):
                 category = 'Transferencia'
             cur_if_none = st.selectbox('Moneda si registrás sin cuenta', MONEDAS, key=prefix + '_currency')
             notes = st.text_input('Nota (opcional)', key=prefix + '_notes')
+            start_with_salary = False
+            if income and category == 'Sueldo / ingreso':
+                from core.database import get_config
+                if get_config('periodo_modo', '', db) == 'salary_manual':
+                    start_with_salary = st.checkbox(
+                        'Iniciar un nuevo período con este sueldo',
+                        value=True,
+                        help='El período anterior queda cerrado el día previo. No se modifica ningún período histórico.'
+                    )
         st.caption('Fecha inicial: hoy. Para cargar algo anterior, cambiá Fecha en los detalles.')
         submitted = st.form_submit_button('Guardar ingreso' if income else 'Guardar pago', type='primary', width='stretch')
         if submitted:
@@ -78,12 +87,21 @@ def register(income, period, db):
                 detail = notes.strip()
                 if third:
                     detail = f'Destinatario: {recipient.strip()}' + (' · ' + detail if detail else '')
+                period_key = None
+                if income and category == 'Sueldo / ingreso' and start_with_salary:
+                    from core.periods import start_period
+                    period_key = start_period(
+                        when, db, mode='salary_manual',
+                        detail='Iniciado al confirmar el cobro de sueldo.'
+                    )
                 insert_movement(when, typ, desc.strip(), category, amount,
                                 None if income else origin, destination, currency, detail,
-                                subtipo='Entre mis cuentas' if own else ('Transferencia a tercero' if third else None), db=db)
+                                subtipo='Entre mis cuentas' if own else ('Transferencia a tercero' if third else None),
+                                db=db, periodo_registro=period_key)
+                from core.periods import period_for_date
                 st.session_state[prefix + '_saved'] = f'Guardado: {desc.strip()} · {money(amount,currency,True)}.'
                 st.session_state['reset_' + prefix] = True
-                st.session_state.pending_period = when.strftime('%Y-%m')
+                st.session_state.pending_period = period_for_date(when, db)
                 st.rerun()
 
 
@@ -115,8 +133,10 @@ def pay_pending(db, prefix='pending'):
             elif not accounts_match_currency([amap[source]], row.moneda or 'ARS', db):
                 st.error('Elegí una cuenta que use la misma moneda que este pendiente.')
             else:
+                from core.periods import period_for_date
+                period_key = period_for_date(when, db)
                 with con(db) as connection:
-                    connection.execute("UPDATE movimientos SET tipo='Gasto',cuenta_origen_id=?,fecha=?,impacta_caja=1,importado=0,subtipo='Pago de pendiente',notas='Pago registrado por el usuario. Referencia original: '||COALESCE(notas,''),periodo_registro=NULL,fecha_precision='dia' WHERE id=? AND tipo='Compromiso' AND COALESCE(estado,'activo')='activo'", (amap[source],when.isoformat(),int(row.id)))
+                    connection.execute("UPDATE movimientos SET tipo='Gasto',cuenta_origen_id=?,fecha=?,impacta_caja=1,importado=0,subtipo='Pago de pendiente',notas='Pago registrado por el usuario. Referencia original: '||COALESCE(notas,''),periodo_registro=?,fecha_precision='dia' WHERE id=? AND tipo='Compromiso' AND COALESCE(estado,'activo')='activo'", (amap[source],when.isoformat(),period_key,int(row.id)))
                 st.session_state.pending_paid = f'Pago registrado: {row.descripcion}.'
-                st.session_state.pending_period = when.strftime('%Y-%m')
+                st.session_state.pending_period = period_key
                 st.rerun()
