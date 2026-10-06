@@ -168,16 +168,23 @@ def _remote_import_initial(content, db):
                     return "CAST(X'"+value.encode('utf-8').hex()+"' AS TEXT)"
                 return src.execute('SELECT quote(?)', (value,)).fetchone()[0]
             statements = []
+            # La configuración del ciclo se crea en la web antes de la importación
+            # y debe sobrevivir al traer una base local anterior.
+            preserved = {'periodos_financieros'}
             # Borrar hijos antes de instituciones; libSQL sí aplica claves foráneas.
-            for table in sorted(TABLES - {'instituciones'}):
+            for table in sorted(TABLES - {'instituciones', 'config'} - preserved):
                 statements.append(f'DELETE FROM "{table}"')
+            statements.append("DELETE FROM config WHERE clave NOT LIKE 'periodo_%'")
             statements.append('DELETE FROM instituciones')
-            ordered = ['instituciones'] + sorted(TABLES - {'instituciones'})
+            ordered = ['instituciones'] + sorted(TABLES - {'instituciones'} - preserved)
             for table in ordered:
                 cursor = src.execute(f'SELECT * FROM "{table}"')
                 columns = [col[0] for col in cursor.description]
-                names = ','.join('"'+col.replace('"','""')+'"' for col in columns)
                 rows = cursor.fetchall()
+                if table == 'config':
+                    key_index = columns.index('clave')
+                    rows = [row for row in rows if not str(row[key_index]).startswith('periodo_')]
+                names = ','.join('"'+col.replace('"','""')+'"' for col in columns)
                 for start in range(0, len(rows), 100):
                     batch = rows[start:start+100]
                     values = ','.join('('+','.join(quote(value) for value in row)+')' for row in batch)
