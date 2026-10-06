@@ -116,9 +116,20 @@ def valid_session(state, now=None):
     if not record:
         return False
     now = time.time() if now is None else now
+    if not (record.get('user') and record.get('version') and 0 <= now-record.get('issued', 0) < SESSION_SECONDS):
+        return False
+
+    # Turso es remoto: no consultar propietario en cada SELECT de la app.
+    # Revalidar contra la base una vez por minuto mantiene revocación razonable
+    # sin multiplicar la latencia de cada interacción.
+    checked = float(state.get('_private_access_checked_at', 0) or 0)
+    if 0 <= now - checked < 60:
+        return True
     row = owner()
-    return bool(row and record.get('user') == row[0] and record.get('version') == row[3]
-                and 0 <= now-record.get('issued', 0) < SESSION_SECONDS)
+    ok = bool(row and record.get('user') == row[0] and record.get('version') == row[3])
+    if ok:
+        state['_private_access_checked_at'] = now
+    return ok
 
 
 def logout():
