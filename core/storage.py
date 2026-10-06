@@ -9,6 +9,7 @@ from core.database import DB_LOCK, con, init_db
 TABLES = {'movimientos','saldos_iniciales','instituciones','cuentas','tarjetas','deudas','posiciones','alternativas_rendimiento','config','referencias_importadas'}
 RECORD_TABLES = TABLES - {'instituciones','config'}
 MAX_DATABASE_BYTES = 32 * 1024 * 1024
+_REMOTE_BACKUP_CHECKED = set()
 
 
 def snapshot(db):
@@ -64,11 +65,17 @@ def daily_backup(db, backup_dir, force=False):
 
 
 def _remote_daily_backup(db, force=False):
-    """Respaldos en la base externa, fragmentados para no superar límites por fila."""
+    """Respaldos remotos: como máximo una comprobación por proceso y por día."""
     stamp = local_now().strftime('%Y%m%d')
+    from core.backend import remote_settings
+    key = (remote_settings()[0], stamp)
+    if not force and key in _REMOTE_BACKUP_CHECKED:
+        return stamp
+
     with con(db) as c:
         c.execute('CREATE TABLE IF NOT EXISTS atomo_backups(fecha TEXT, parte INTEGER, contenido BLOB NOT NULL, PRIMARY KEY(fecha,parte))')
         if not force and c.execute('SELECT 1 FROM atomo_backups WHERE fecha=? LIMIT 1', (stamp,)).fetchone():
+            _REMOTE_BACKUP_CHECKED.add(key)
             return stamp
     content = snapshot(db)
     with con(db) as c:
@@ -76,6 +83,7 @@ def _remote_daily_backup(db, force=False):
         for part, start in enumerate(range(0, len(content), 256*1024)):
             c.execute('INSERT INTO atomo_backups VALUES (?,?,?)', (stamp, part, content[start:start+256*1024]))
         c.execute('DELETE FROM atomo_backups WHERE fecha NOT IN (SELECT DISTINCT fecha FROM atomo_backups ORDER BY fecha DESC LIMIT 30)')
+    _REMOTE_BACKUP_CHECKED.add(key)
     return stamp
 
 
