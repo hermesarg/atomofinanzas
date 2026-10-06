@@ -60,7 +60,6 @@ def detail_widget():
 
 
 def period_selector(db):
-    from core.database import dfq
     from core.periods import ensure_active_period
     today = local_today()
     active = ensure_active_period(db)
@@ -77,9 +76,7 @@ def period_selector(db):
         year, month = map(int, base[:7].split('-'))
         st.session_state.period_year, st.session_state.period_month = year, month
 
-    years = list(range(2000, today.year + 11))
-    recorded = dfq('SELECT DISTINCT CAST(substr(COALESCE(periodo_registro,fecha),1,4) AS INTEGER) AS y FROM movimientos', db=db)
-    years = sorted(set(years + [int(y) for y in recorded.y if y and 1 <= y <= 9999] + [st.session_state.period_year]))
+    years = sorted(set(range(2000, today.year + 11)) | {int(st.session_state.period_year)})
     with st.expander('Ver otro período', expanded=False):
         a, b = st.columns([1.6, 1])
         month = a.selectbox('Período', list(range(1,13)), format_func=lambda m: MONTHS[m-1], key='period_month')
