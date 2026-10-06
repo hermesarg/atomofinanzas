@@ -22,6 +22,8 @@ jobs:
         run: python -m compileall -q app.py app_cloud.py app_demo.py core screens tests
       - name: Periods
         run: python tests/check_periods.py
+      - name: Public demo isolation
+        run: python tests/check_demo.py
       - name: Accounting history
         run: python tests/check_history_accounting.py
       - name: Quick flows
