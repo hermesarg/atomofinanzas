@@ -20,6 +20,7 @@ _PAGE_ICON = Image.open(ATOMO_FAVICON) if ATOMO_FAVICON.exists() else "⚛️"
 PAGES = [
     "Pagos", "Ingresos", "Pendientes",
     "Inicio",
+    "Electro",
     "Cuentas",
     "Tarjetas y cuotas",
     "Movimientos",
@@ -35,6 +36,7 @@ PAGES = [
 PAGE_ICONS = {
     "Pagos": "💸", "Ingresos": "💰", "Pendientes": "📅",
     "Inicio": "🏠",
+    "Electro": "⚡",
     "Cuentas": "🏦",
     "Tarjetas y cuotas": "💳",
     "Movimientos": "💸",
