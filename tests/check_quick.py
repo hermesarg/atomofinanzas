@@ -57,7 +57,7 @@ assert balances_df(LIVE_DB).set_index('id').loc[1,'saldo']==before-2500
 paid=query("select tipo,importado,subtipo from movimientos where descripcion='Pendiente rápido QA'").iloc[0]
 assert paid.tolist()==['Gasto',0,'Pago de pendiente']
 # Inline rate editing updates estimation immediately and preserves rate when switched off.
-group('Más');app.selectbox(key='section_detail').select('Cuentas').run();check()
+group('Más');app.button(key='detail_more_Cuentas').click().run();check()
 app.toggle(key='yield_on_1').set_value(True).run();check()
 app.text_input(key='yield_rate_1').set_value('36,1234').run();check()
 assert query('select tasa_anual from cuentas where id=1').iloc[0,0]==36.1234
