@@ -24,6 +24,9 @@ def render(period, db):
         st.success("Guardado.")
         st.rerun()
 
+    from core.periods import render_settings as render_period_settings
+    render_period_settings(db)
+
     from core.security import web_private
     if web_private():
         from core.storage import render_backups
