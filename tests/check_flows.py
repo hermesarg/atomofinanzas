@@ -22,6 +22,8 @@ def page(app,title):
         if group == 'Pagos':
             if title == 'Movimientos':app.button(key='pay_history').click().run()
             else:app.button(key='main_Pagos').click().run()
+        elif group == 'Más':
+            app.button(key='detail_more_'+title).click().run()
         else:app.selectbox(key='section_detail').select(title).run()
         check(app)
 def text(app,label,value): get(app.text_input,label).set_value(value)
