@@ -46,6 +46,9 @@ next(x for x in app.text_input if x.label=='Usuario').set_value('qauser')
 next(x for x in app.text_input if x.label=='Contraseña').set_value(password)
 next(x for x in app.button if x.label=='Entrar').click().run()
 assert not app.exception and LIVE_DB.exists()
+if any(x.label=='Guardar y empezar' for x in app.button):
+    next(x for x in app.button if x.label=='Guardar y empezar').click().run()
+    assert not app.exception
 assert 'access_password' not in app.session_state
 assert import_available(LIVE_DB)
 fixture=DATA/'origen.db';init_db(fixture)
