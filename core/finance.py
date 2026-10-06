@@ -258,6 +258,8 @@ def electro_financiero(period, db=None):
         "net_after": net_after,
         "net_ratio": net_ratio,
         "flexible_spend": float(summary["discrecional"]),
+        "_balances": balances,
+        "_summary": summary,
     }
 
 def deterministic_suggestions(period, db=None, electro=None):
@@ -384,8 +386,8 @@ def render_electro(e):
         unsafe_allow_html=True,
     )
 
-def yield_snapshot(db=None, days=30):
-    balances = balances_df(db)
+def yield_snapshot(db=None, days=30, balances=None):
+    balances = balances if balances is not None else balances_df(db)
     if balances.empty:
         return {
             "remunerated_balance":0.0,
