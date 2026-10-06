@@ -56,6 +56,26 @@ def con(db=None):
         connection.close()
         DB_LOCK.release()
 
+@contextmanager
+def read_con(db=None):
+    """Lectura sin BEGIN IMMEDIATE: evita una ida de red y locks innecesarios."""
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from core.security import web_private, valid_session
+    from core.backend import connect
+    target = db or current_db()
+    if web_private() and get_script_run_ctx(suppress_warning=True) is not None and Path(target).resolve() == LIVE_DB.resolve():
+        if not valid_session(st.session_state):
+            raise PermissionError('Tu sesión venció. Volvé a entrar a tu espacio privado.')
+    DB_LOCK.acquire()
+    connection = None
+    try:
+        connection = connect(target)
+        yield connection
+    finally:
+        if connection is not None:
+            connection.close()
+        DB_LOCK.release()
+
 def table_columns(c, table):
     return {r[1] for r in c.execute(f"PRAGMA table_info({table})").fetchall()}
 
@@ -309,7 +329,7 @@ def reset_demo(db=None):
     seed_demo(db)
 
 def get_config(key, default, db=None):
-    with con(db) as c:
+    with read_con(db) as c:
         row = c.execute("SELECT valor FROM config WHERE clave=?", (key,)).fetchone()
     return row[0] if row else default
 
@@ -321,13 +341,13 @@ def set_config(key, value, db=None):
         """, (key, str(value)))
 
 def dfq(sql, params=(), db=None):
-    with con(db) as c:
+    with read_con(db) as c:
         # DB-API directo evita avisos de pandas por drivers sin SQLAlchemy.
         cursor = c.execute(sql, params)
         return pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
 
 def inst_id(name, db=None):
-    with con(db) as c:
+    with read_con(db) as c:
         row = c.execute("SELECT id FROM instituciones WHERE nombre=?", (name,)).fetchone()
     return row[0] if row else None
 
