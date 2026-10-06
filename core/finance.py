@@ -452,7 +452,8 @@ def deterministic_suggestions(period, db=None, electro=None):
 
     if e["income"] > 0:
         flexible_ratio = e["flexible_spend"] / e["income"]
-        target = float(e.get("_flex_target_pct", get_config("gasto_discrecional_objetivo_pct", 15, db)))/100
+        target_pct = e["_flex_target_pct"] if "_flex_target_pct" in e else get_config("gasto_discrecional_objetivo_pct", 15, db)
+        target = float(target_pct)/100
         if flexible_ratio > target:
             watch.append(
                 f"Los gastos flexibles van en {flexible_ratio*100:.1f}% del ingreso, por encima de tu referencia de {target*100:.0f}%.".replace(".", ",", 1)
@@ -680,7 +681,8 @@ def atomo_profile(period, db=None, electro=None):
         hints.append("ordenar deudas / solvencia")
     if e["flow"] < 60:
         hints.append("cuidar flujo mensual")
-    if incomes > 0 and flex_ratio > float(e.get("_flex_target_pct", get_config("gasto_discrecional_objetivo_pct", 15, db))) / 100:
+    target_pct = e["_flex_target_pct"] if "_flex_target_pct" in e else get_config("gasto_discrecional_objetivo_pct", 15, db)
+    if incomes > 0 and flex_ratio > float(target_pct) / 100:
         hints.append("reducir gastos flexibles")
     if not hints:
         hints.append("mantener la constancia")
