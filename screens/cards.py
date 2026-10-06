@@ -91,7 +91,7 @@ def render(period, db):
                 if desc.strip() and each and each>0:
                     currency = tdf.loc[tdf.id == cardmap[card], "moneda"].iloc[0]
                     with con(db) as cdb:
-                        insert_installments(cdb, desc.strip(), remaining, each, first_due, cat, currency, card)
+                        insert_installments(cdb, desc.strip(), remaining, each, first_due, cat, currency, card, db)
                     st.success("Cuotas agregadas. Ahora aparecen en proyección.")
                     st.rerun()
                 else:
@@ -121,12 +121,15 @@ def render(period, db):
             if not accounts_match_currency([amap[ac]], currency, db):
                 st.error("Elegí una cuenta con la misma moneda del compromiso.")
             else:
+                from core.periods import period_for_date
+                paid_on = local_today()
+                period_key = period_for_date(paid_on, db)
                 with con(db) as cdb:
                     cdb.execute("""
-                    UPDATE movimientos SET tipo='Gasto',cuenta_origen_id=?,fecha=?,impacta_caja=1,importado=0,subtipo='Pago de pendiente',notas='Pago registrado por el usuario. Referencia original: '||COALESCE(notas,''),periodo_registro=NULL,fecha_precision='dia'
+                    UPDATE movimientos SET tipo='Gasto',cuenta_origen_id=?,fecha=?,impacta_caja=1,importado=0,subtipo='Pago de pendiente',notas='Pago registrado por el usuario. Referencia original: '||COALESCE(notas,''),periodo_registro=?,fecha_precision='dia'
                     WHERE id=? AND tipo='Compromiso' AND COALESCE(estado,'activo')='activo'
-                    """,(amap[ac],local_today().isoformat(),pmap[ps]))
-                st.session_state.pending_period = local_today().strftime("%Y-%m")
+                    """,(amap[ac],paid_on.isoformat(),period_key,pmap[ps]))
+                st.session_state.pending_period = period_key
                 st.success("Actualizado.")
                 st.rerun()
     else:
@@ -137,13 +140,16 @@ def render(period, db):
 # =========================================================
 
 
-def insert_installments(connection, concept, count, amount, first, category, currency, card):
+def insert_installments(connection, concept, count, amount, first, category, currency, card, db):
+    from core.periods import period_for_date
     group = f"q_{uuid.uuid4().hex}"
     for i in range(int(count)):
+        due = add_months(first, i)
+        period_key = period_for_date(due, db)
         connection.execute("""
             INSERT INTO movimientos(fecha,tipo,descripcion,categoria,monto,moneda,notas,
-                creado_en,grupo_cuotas,cuota_actual,cuotas_total,estado,impacta_caja)
-            VALUES (?,'Compromiso',?,?,?,?,?,?,?,?,?,'activo',0)
-        """, (add_months(first,i).isoformat(), f"{concept} · cuota pendiente {i+1}/{int(count)} · {card}",
+                creado_en,grupo_cuotas,cuota_actual,cuotas_total,periodo_registro,estado,impacta_caja)
+            VALUES (?,'Compromiso',?,?,?,?,?,?,?,?,?,?,'activo',0)
+        """, (due.isoformat(), f"{concept} · cuota pendiente {i+1}/{int(count)} · {card}",
             category, amount, currency, "Cuota generada por el usuario", local_now().isoformat(timespec="seconds"),
-            group, i+1, int(count)))
+            group, i+1, int(count), period_key))
