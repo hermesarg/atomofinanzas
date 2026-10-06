@@ -6,7 +6,7 @@ from pathlib import Path
 from core.clock import local_now
 from core.database import DB_LOCK, con, init_db
 
-TABLES = {'movimientos','saldos_iniciales','instituciones','cuentas','tarjetas','deudas','posiciones','alternativas_rendimiento','config','referencias_importadas'}
+TABLES = {'movimientos','saldos_iniciales','periodos_financieros','instituciones','cuentas','tarjetas','deudas','posiciones','alternativas_rendimiento','config','referencias_importadas'}
 RECORD_TABLES = TABLES - {'instituciones','config'}
 MAX_DATABASE_BYTES = 32 * 1024 * 1024
 _REMOTE_BACKUP_CHECKED = set()
