@@ -7,7 +7,7 @@ import calendar
 import pandas as pd
 import streamlit as st
 from core.config import DISCRETIONARY
-from core.database import accounts_df, balances_df, debts_df, dfq, get_config, institutions_df, movements_df, positions_df
+from core.database import accounts_df, balances_df, debts_df, dfq, get_config, institutions_df, movements_df, positions_df, read_con
 
 def add_months(d, months):
     y = d.year + (d.month - 1 + months) // 12
@@ -121,18 +121,173 @@ def _piecewise_coverage(ratio):
         return 85 + 15 * (ratio - 1.5) / .5
     return 100.0
 
-def electro_financiero(period, db=None):
-    summary, _ = period_summary(period, db)
-    balances = balances_df(db)
-    debts = debts_df(db)
-    positions = positions_df(db)
-    commitments_45 = commitments_next(45, db)
-    all_commitments = dfq("""
-        SELECT monto,moneda,deuda_id FROM movimientos
-        WHERE tipo='Compromiso' AND COALESCE(estado,'activo')='activo'
-    """, db=db)
+def _cursor_frame(cursor):
+    rows = cursor.fetchall()
+    columns = [col[0] for col in cursor.description] if cursor.description else []
+    return pd.DataFrame(rows, columns=columns)
 
-    # ---------- LIQUIDEZ ----------
+
+def _electro_snapshot(period, db=None):
+    """Trae los datos del Electro usando una sola conexión.
+
+    En Turso abrir varias conexiones por render agrega latencia perceptible.
+    Mantener las lecturas relacionadas dentro de una conexión reduce ese costo
+    sin cachear datos financieros ni mostrar valores viejos después de una carga.
+    """
+    today = local_today()
+    end_45 = (today + timedelta(days=45)).isoformat()
+    with read_con(db) as c:
+        period_moves = _cursor_frame(c.execute("""
+            SELECT fecha,tipo,categoria,monto,moneda,cuenta_origen_id,cuenta_destino_id,
+                   importado,impacta_caja,periodo_registro
+            FROM movimientos
+            WHERE COALESCE(estado,'activo')='activo'
+              AND COALESCE(periodo_registro,substr(fecha,1,7))=?
+        """, (period,)))
+
+        accounts = _cursor_frame(c.execute("""
+            SELECT c.id,c.nombre,c.tipo_cuenta,c.moneda,c.saldo_base,c.fecha_saldo_base,
+                   c.liquidez_operativa,c.genera_rendimiento,c.tasa_anual,c.tipo_tasa,
+                   c.fecha_tasa,c.fuente_tasa,i.nombre AS institucion
+            FROM cuentas c
+            LEFT JOIN instituciones i ON i.id=c.institucion_id
+            WHERE c.activa=1
+            ORDER BY i.nombre,c.nombre
+        """))
+
+        balance_moves = pd.DataFrame()
+        if not accounts.empty:
+            starts = [str(x) for x in accounts["fecha_saldo_base"] if x]
+            earliest = min(starts) if starts else today.isoformat()
+            balance_moves = _cursor_frame(c.execute("""
+                SELECT fecha,tipo,monto,cuenta_origen_id,cuenta_destino_id
+                FROM movimientos
+                WHERE fecha>=? AND fecha<=date('now','localtime')
+                  AND COALESCE(estado,'activo')='activo'
+                  AND (COALESCE(importado,0)=0 OR COALESCE(impacta_caja,1)=1)
+                  AND (cuenta_origen_id IS NOT NULL OR cuenta_destino_id IS NOT NULL)
+            """, (earliest,)))
+
+        debts = _cursor_frame(c.execute("""
+            SELECT id,saldo_pendiente,cuota,cuotas_restantes,proximo_vencimiento,moneda,
+                   saldo_confirmado,cuotas_confirmadas
+            FROM deudas
+            WHERE activa=1
+        """))
+
+        positions = _cursor_frame(c.execute("""
+            SELECT cantidad,
+                   CASE WHEN COALESCE(valor_actual_confirmado,1)=1 THEN precio_actual ELSE NULL END AS precio_actual,
+                   moneda
+            FROM posiciones
+        """))
+
+        commitments = _cursor_frame(c.execute("""
+            SELECT fecha,monto,moneda,deuda_id
+            FROM movimientos
+            WHERE tipo='Compromiso' AND COALESCE(estado,'activo')='activo'
+        """))
+
+        history = _cursor_frame(c.execute("""
+            SELECT fecha,tipo,categoria,monto,moneda,cuenta_origen_id,cuenta_destino_id,
+                   importado,periodo_registro
+            FROM movimientos
+            WHERE COALESCE(estado,'activo')='activo'
+            ORDER BY fecha
+        """))
+
+        config_rows = c.execute("""
+            SELECT clave,valor FROM config
+            WHERE clave IN ('colchon_objetivo_ars','gasto_discrecional_objetivo_pct')
+        """).fetchall()
+
+        unresolved_row = c.execute("""
+            SELECT COUNT(*)
+            FROM referencias_importadas
+            WHERE seccion IN ('Deudas','Obligaciones')
+              AND (
+                lower(COALESCE(estado_actual,'')) LIKE '%corroborar%'
+                OR lower(COALESCE(estado_actual,'')) LIKE '%estimar%'
+                OR lower(COALESCE(estado_actual,'')) LIKE '%estimado%'
+                OR lower(COALESCE(estado_actual,'')) LIKE '%referencia%'
+              )
+        """).fetchone()
+
+    config = {row[0]: row[1] for row in config_rows}
+    balances = []
+    for _, r in accounts.iterrows():
+        aid = int(r["id"])
+        saldo = float(r["saldo_base"] or 0)
+        since = str(r["fecha_saldo_base"])
+        if not balance_moves.empty:
+            relevant = balance_moves[
+                (balance_moves["fecha"] >= since)
+                & (
+                    (balance_moves["cuenta_origen_id"] == aid)
+                    | (balance_moves["cuenta_destino_id"] == aid)
+                )
+            ]
+            for _, m in relevant.iterrows():
+                amount = float(m["monto"])
+                if m["tipo"] == "Ingreso" and m["cuenta_destino_id"] == aid:
+                    saldo += amount
+                elif m["tipo"] == "Gasto" and m["cuenta_origen_id"] == aid:
+                    saldo -= amount
+                elif m["tipo"] == "Transferencia":
+                    if m["cuenta_origen_id"] == aid:
+                        saldo -= amount
+                    if m["cuenta_destino_id"] == aid:
+                        saldo += amount
+        balances.append({
+            "id": aid,
+            "institucion": r.get("institucion"),
+            "cuenta": r["nombre"],
+            "tipo": r["tipo_cuenta"],
+            "moneda": r["moneda"],
+            "saldo": saldo,
+            "liquidez_operativa": r.get("liquidez_operativa"),
+            "genera_rendimiento": int(r.get("genera_rendimiento", 0) or 0),
+            "tasa_anual": float(r.get("tasa_anual", 0) or 0),
+            "tipo_tasa": r.get("tipo_tasa", "TNA") or "TNA",
+            "fecha_tasa": r.get("fecha_tasa"),
+            "fuente_tasa": r.get("fuente_tasa"),
+        })
+    balances = pd.DataFrame(balances)
+
+    if period_moves.empty:
+        summary = {"ingresos":0., "gastos":0., "compromisos":0., "transferencias":0., "discrecional":0.}
+    else:
+        ars = period_moves[period_moves["moneda"].fillna("ARS") == "ARS"]
+        summary = {
+            "ingresos": float(ars.loc[ars.tipo=="Ingreso","monto"].sum()),
+            "gastos": float(ars.loc[ars.tipo=="Gasto","monto"].sum()),
+            "compromisos": float(ars.loc[ars.tipo=="Compromiso","monto"].sum()),
+            "transferencias": float(ars.loc[ars.tipo=="Transferencia","monto"].sum()),
+            "discrecional": float(ars.loc[(ars.tipo=="Gasto") & (ars.categoria.isin(DISCRETIONARY)),"monto"].sum()),
+        }
+
+    return {
+        "summary": summary,
+        "balances": balances,
+        "debts": debts,
+        "positions": positions,
+        "commitments": commitments,
+        "history": history,
+        "buffer_target": float(config.get("colchon_objetivo_ars", 700000) or 700000),
+        "flex_target_pct": float(config.get("gasto_discrecional_objetivo_pct", 15) or 15),
+        "unresolved_refs": int(unresolved_row[0] if unresolved_row else 0),
+        "end_45": end_45,
+    }
+
+
+def electro_financiero(period, db=None):
+    snap = _electro_snapshot(period, db)
+    summary = snap["summary"]
+    balances = snap["balances"]
+    debts = snap["debts"]
+    positions = snap["positions"]
+    commitments = snap["commitments"]
+
     liquid_ars = 0.0
     if not balances.empty:
         liquid_mask = (
@@ -144,27 +299,33 @@ def electro_financiero(period, db=None):
         liquid_ars = float(balances.loc[liquid_mask, "saldo"].sum())
 
     commitment_45_ars = 0.0
-    if not commitments_45.empty:
-        mask = commitments_45["moneda"].fillna("ARS") == "ARS"
-        commitment_45_ars = float(commitments_45.loc[mask, "monto"].sum())
+    commitments_45 = commitments
+    if not commitments.empty:
+        commitments_45 = commitments[
+            (commitments["fecha"] <= snap["end_45"])
+            & (commitments["moneda"].fillna("ARS") == "ARS")
+        ]
+        commitment_45_ars = float(commitments_45["monto"].sum())
 
     if not debts.empty:
-        end = (local_today() + timedelta(days=45)).isoformat()
-        scheduled = debts[(debts["moneda"].fillna("ARS") == "ARS") &
-            debts["proximo_vencimiento"].notna() & (debts["proximo_vencimiento"] <= end)]
-        linked = set(commitments_45["deuda_id"].dropna())
+        confirmed = debts.copy()
+        confirmed.loc[confirmed["saldo_confirmado"].fillna(1) != 1, "saldo_pendiente"] = pd.NA
+        confirmed.loc[confirmed["cuotas_confirmadas"].fillna(1) != 1, "cuotas_restantes"] = pd.NA
+        scheduled = confirmed[
+            (confirmed["moneda"].fillna("ARS") == "ARS")
+            & confirmed["proximo_vencimiento"].notna()
+            & (confirmed["proximo_vencimiento"] <= snap["end_45"])
+        ]
+        linked = set(commitments_45["deuda_id"].dropna()) if not commitments_45.empty else set()
         scheduled = scheduled[~scheduled["id"].isin(linked)]
-        commitment_45_ars += float(scheduled["cuota"].sum())
+        commitment_45_ars += float(scheduled["cuota"].fillna(0).sum())
+        debts = confirmed
 
-    buffer_target = float(get_config("colchon_objetivo_ars", 700000, db))
+    buffer_target = snap["buffer_target"]
     liquidity_need = max(commitment_45_ars + buffer_target, 1.0)
     liquidity_ratio = liquid_ars / liquidity_need
     liquidity_score = max(0, min(100, _piecewise_coverage(liquidity_ratio)))
 
-    # ---------- SOLVENCIA ----------
-    # Patrimonio conocido: saldos de cuentas (incluida reserva y prepagos)
-    # más posiciones valoradas. El fondo YPF sin desglose queda como referencia
-    # y no se inventa valoración ni se duplica como cuenta y posición.
     investment_value_ars = 0.0
     if not positions.empty:
         pos_ars = positions[positions["moneda"] == "ARS"].copy()
@@ -177,14 +338,14 @@ def electro_financiero(period, db=None):
     debt_balance_ars = 0.0
     if not debts.empty:
         debt_balance_ars = float(
-            debts.loc[debts["moneda"].fillna("ARS")=="ARS", "saldo_pendiente"].sum()
+            debts.loc[debts["moneda"].fillna("ARS")=="ARS", "saldo_pendiente"].fillna(0).sum()
         )
 
     future_commitments_ars = 0.0
-    if not all_commitments.empty:
+    if not commitments.empty:
         known_debts = set(debts.loc[debts["saldo_pendiente"].notna(), "id"]) if not debts.empty else set()
-        mask = (all_commitments["moneda"].fillna("ARS") == "ARS") & ~all_commitments["deuda_id"].isin(known_debts)
-        future_commitments_ars = float(all_commitments.loc[mask, "monto"].sum())
+        mask = (commitments["moneda"].fillna("ARS") == "ARS") & ~commitments["deuda_id"].isin(known_debts)
+        future_commitments_ars = float(commitments.loc[mask, "monto"].sum())
 
     liabilities_known = max(0.0, debt_balance_ars + future_commitments_ars)
 
@@ -205,14 +366,12 @@ def electro_financiero(period, db=None):
             solvency_score = 100.0
         solvency_score = max(0, min(100, solvency_score))
 
-    # ---------- FLUJO ----------
     income = float(summary["ingresos"])
     expenses = float(summary["gastos"])
     period_commitments = float(summary["compromisos"])
     if income > 0:
         net_after = income - expenses - period_commitments
         net_ratio = net_after / income
-        # -20% -> 0 | 0% -> 33 | +20% -> 67 | +40% -> 100
         flow_score = 100 * (net_ratio + .20) / .60
         flow_score = max(0, min(100, flow_score))
     else:
@@ -220,19 +379,15 @@ def electro_financiero(period, db=None):
         net_ratio = 0.0
         flow_score = 50.0 if (expenses + period_commitments) == 0 else 20.0
 
-    # El estado general no reemplaza a los tres canales.
-    # La señal se vuelve más errática si alguno de ellos queda muy rezagado.
     overall_score = round(
         liquidity_score * .40 +
         solvency_score * .35 +
         flow_score * .25
     )
-
     dispersion = max(liquidity_score, solvency_score, flow_score) - min(
         liquidity_score, solvency_score, flow_score
     )
     tension = min(100.0, (100 - overall_score) * .78 + dispersion * .35)
-
     free_after = liquid_ars - commitment_45_ars - buffer_target
 
     return {
@@ -260,6 +415,9 @@ def electro_financiero(period, db=None):
         "flexible_spend": float(summary["discrecional"]),
         "_balances": balances,
         "_summary": summary,
+        "_history": snap["history"],
+        "_flex_target_pct": snap["flex_target_pct"],
+        "_unresolved_refs": snap["unresolved_refs"],
     }
 
 def deterministic_suggestions(period, db=None, electro=None):
@@ -294,7 +452,7 @@ def deterministic_suggestions(period, db=None, electro=None):
 
     if e["income"] > 0:
         flexible_ratio = e["flexible_spend"] / e["income"]
-        target = float(get_config("gasto_discrecional_objetivo_pct", 15, db))/100
+        target = float(e.get("_flex_target_pct", get_config("gasto_discrecional_objetivo_pct", 15, db)))/100
         if flexible_ratio > target:
             watch.append(
                 f"Los gastos flexibles van en {flexible_ratio*100:.1f}% del ingreso, por encima de tu referencia de {target*100:.0f}%.".replace(".", ",", 1)
@@ -468,7 +626,9 @@ _LEVEL_THRESHOLDS = [18, 30, 42, 54, 65, 74, 82, 90, 101]
 
 def atomo_profile(period, db=None, electro=None):
     e = electro if electro is not None else electro_financiero(period, db)
-    history = movements_df(db=db)
+    history = e.get("_history")
+    if history is None:
+        history = movements_df(db=db)
 
     if history.empty:
         incomes = 0.0
@@ -520,7 +680,7 @@ def atomo_profile(period, db=None, electro=None):
         hints.append("ordenar deudas / solvencia")
     if e["flow"] < 60:
         hints.append("cuidar flujo mensual")
-    if incomes > 0 and flex_ratio > float(get_config("gasto_discrecional_objetivo_pct", 15, db)) / 100:
+    if incomes > 0 and flex_ratio > float(e.get("_flex_target_pct", get_config("gasto_discrecional_objetivo_pct", 15, db))) / 100:
         hints.append("reducir gastos flexibles")
     if not hints:
         hints.append("mantener la constancia")
