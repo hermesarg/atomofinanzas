@@ -9,6 +9,7 @@ from core.config import PAGES, LIVE_DB
 from core.navigation import GROUPS, group_for_page
 from core.database import dfq, con, balances_df
 from core.finance import period_summary, atomo_profile, parse_amount, money, add_months
+from core.clock import today as local_today
 
 def get(elements,label):
     items=[x for x in elements if x.label==label]
@@ -97,7 +98,7 @@ text(app,'Compra / concepto *','Compra USD QA'); text(app,'Monto de cada cuota *
 qs=query("select * from movimientos where tipo='Compromiso'"); assert len(qs)==3 and set(qs.moneda)=={'USD'}
 choose_account('Salió de *','Banco QA'); click(app,'Marcar como pagado'); assert app.error
 choose_account('Salió de *','USD QA'); click(app,'Marcar como pagado'); assert len(query("select * from movimientos where tipo='Compromiso'"))==2
-row=query("select * from movimientos where grupo_cuotas is not null and tipo='Gasto'").iloc[0]; assert row.fecha==date.today().isoformat()
+row=query("select * from movimientos where grupo_cuotas is not null and tipo='Gasto'").iloc[0]; assert row.fecha==local_today().isoformat()
 print('PASS tarjetas: cierre opcional, cuotas atómicas y en moneda correcta, pago y fecha efectiva')
 page(app,'Deudas'); text(app,'Nombre de la deuda *','Deuda QA'); text(app,'Cuota','oops'); click(app,'Guardar deuda'); assert app.error
 text(app,'Saldo pendiente *','10.000'); text(app,'Cuota','1.000'); click(app,'Guardar deuda'); assert len(query('select * from deudas'))==1
