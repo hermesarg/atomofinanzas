@@ -30,6 +30,8 @@ assert password.encode() not in (DATA/'acceso.db').read_bytes()
 assert authenticate('qauser','incorrecta')[0] is None
 assert authenticate('otra-persona',password)[0] is None
 assert authenticate('qauser',password)[0]==result
+assert authenticate('QAUSER',password)[0]==result, 'El usuario debe ignorar mayúsculas/minúsculas'
+assert authenticate('qauser',password.swapcase())[0] is None, 'La contraseña debe distinguir mayúsculas/minúsculas'
 state={'_private_access':{'user':result[0],'version':result[1],'issued':time.time()}}
 assert valid_session(state)
 assert not valid_session(state,time.time()+12*3600+1)
@@ -103,4 +105,4 @@ app.button(key='private_logout').click().run()
 assert not app.exception and any(x.label=='Contraseña' for x in app.text_input)
 assert not app.dataframe and not app.get('file_uploader')
 with con(LIVE_DB) as c:assert c.execute('SELECT COUNT(*) FROM movimientos').fetchone()[0]==2
-print('PASS acceso privado bloqueado antes de SQLite, contraseña derivada, intentos persistentes, sesión expirada/revocada, ingreso/salida, importación inicial protegida, archivos inválidos, snapshot íntegro/retención y fecha argentina')
+print('PASS acceso privado, usuario sin sensibilidad a mayúsculas, contraseña sensible a mayúsculas, intentos, sesión, importación, backups y fecha argentina')
