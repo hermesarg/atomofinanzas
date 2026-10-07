@@ -102,9 +102,11 @@ def authenticate(username, password):
         row = c.execute('SELECT usuario,salt,digest,version FROM propietario WHERE id=1').fetchone()
         if not row:
             return None, 'Usuario o contraseña incorrectos.'
-        # El cálculo se ejecuta también para un usuario equivocado.
+        # El usuario no distingue mayúsculas/minúsculas; la contraseña sí.
+        # El cálculo de contraseña se ejecuta también para un usuario equivocado.
         digest = password_digest(password[:257], row[1])
-        ok = hmac.compare_digest(digest, row[2]) and hmac.compare_digest(username.encode(), row[0].encode()) and len(password) <= 256
+        same_user = hmac.compare_digest(username.strip().casefold().encode(), row[0].casefold().encode())
+        ok = hmac.compare_digest(digest, row[2]) and same_user and len(password) <= 256
         if ok:
             c.execute('DELETE FROM intentos')
             return (row[0], row[3]), None
@@ -123,7 +125,7 @@ def reset_owner_password(recovery_code, username, password, confirmation):
         row = c.execute('SELECT usuario FROM propietario WHERE id=1').fetchone()
         if not row:
             return None
-        if not hmac.compare_digest(username.strip().encode(), row[0].encode()):
+        if not hmac.compare_digest(username.strip().casefold().encode(), row[0].casefold().encode()):
             return None
         if not hmac.compare_digest(recovery_code.encode(), expected.encode()):
             return None
@@ -204,9 +206,11 @@ def require_private_access():
                 st.error(str(e))
     else:
         st.subheader('Entrá a tu espacio')
+        st.caption('El usuario no distingue mayúsculas/minúsculas. La contraseña sí.')
         with st.form('private_login'):
             user = st.text_input('Usuario', key='access_user', max_chars=80)
-            password = st.text_input('Contraseña', type='password', key='access_password')
+            password = st.text_input('Contraseña', type='password', key='access_password',
+                                     help='La contraseña distingue mayúsculas y minúsculas.')
             submit = st.form_submit_button('Entrar', width='stretch')
         if submit:
             result, error = authenticate(user.strip(), password)
