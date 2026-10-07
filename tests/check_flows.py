@@ -77,17 +77,17 @@ movement('Ingreso','Sueldo QA','20.000','Entra a','Banco QA')
 movement('Gasto','Gasto QA','5.000,50','Sale de','Banco QA')
 get(app.radio,'Tipo *').set_value('Transferencia'); app.run()
 text(app,'Descripción *','Propia QA'); text(app,'Monto *','10.000'); choose_account('Sale de *','Banco QA'); choose_account('Entra a *','Billetera QA'); click(app,'Guardar movimiento')
-s,_=period_summary(date.today().strftime('%Y-%m'),LIVE_DB); assert s['gastos']==5000.5 and s['transferencias']==10000
+s,_=period_summary(local_today().strftime('%Y-%m'),LIVE_DB); assert s['gastos']==5000.5 and s['transferencias']==10000
 get(app.radio,'¿Qué tipo de transferencia es? *').set_value('A otra persona'); app.run()
 text(app,'Descripción *','Tercero QA'); text(app,'Monto *','1.000'); choose_account('Sale de *','Banco QA')
 click(app,'Guardar movimiento'); assert app.error
 text(app,'Va a / destinatario *','Persona ficticia'); click(app,'Guardar movimiento')
-s,_=period_summary(date.today().strftime('%Y-%m'),LIVE_DB); assert s['gastos']==6000.5
+s,_=period_summary(local_today().strftime('%Y-%m'),LIVE_DB); assert s['gastos']==6000.5
 text(app,'Descripción *','Moneda incorrecta'); text(app,'Monto *','100'); choose_account('Sale de *','USD QA'); click(app,'Guardar movimiento'); assert app.error
 for raw in ('nan','inf','-50','1.2','1,2,3','USDT nan'):
     text(app,'Monto *',raw); click(app,'Guardar movimiento'); assert app.error
 get(app.radio,'Tipo *').set_value('Ingreso'); app.run(); text(app,'Descripción *','Ingreso USD'); text(app,'Monto *','10'); pick(app,'Moneda *','USD'); choose_account('Entra a','USD QA'); click(app,'Guardar movimiento')
-s,_=period_summary(date.today().strftime('%Y-%m'),LIVE_DB); assert s['ingresos']==20000
+s,_=period_summary(local_today().strftime('%Y-%m'),LIVE_DB); assert s['ingresos']==20000
 assert balances_df(LIVE_DB).loc[lambda x:x.id==1,'saldo'].iloc[0]==124000
 print('PASS movimientos: ingreso/gasto, transferencia propia/tercero, monedas, inválidos y saldos')
 page(app,'Tarjetas y cuotas'); click(app,'Guardar tarjeta'); assert app.error
@@ -118,13 +118,13 @@ text(app,'Nombre *','Institución QA'); click(app,'Agregar'); click(app,'Agregar
 page(app,'Configuración'); text(app,'Colchón objetivo ARS *','123.456'); click(app,'Guardar configuración')
 assert query("select valor from config where clave='colchon_objetivo_ars'").iloc[0,0]=='123456.0'
 page(app,'Proyección'); pick(app,'Período',1); pick(app,'Año',2025); app.run(); check(app)
-pick(app,'Período',date.today().month); pick(app,'Año',date.today().year); app.run(); check(app)
+pick(app,'Período',local_today().month); pick(app,'Año',local_today().year); app.run(); check(app)
 # New Streamlit session, same SQLite data
 again=new_app(); check(again); assert len(query('select * from cuentas'))==4
 assert parse_amount('1.234.567,89')==1234567.89 and money(1234.56,'ARS',True)=='$ 1.234,56'
 assert add_months(date(2024,1,31),1)==date(2024,2,29)
 # Scaling every financial magnitude cannot buy a better level.
-period=date.today().strftime('%Y-%m'); profile=atomo_profile(period,LIVE_DB)
+period=local_today().strftime('%Y-%m'); profile=atomo_profile(period,LIVE_DB)
 with con(LIVE_DB) as c:
     for table,cols in [('movimientos',['monto']),('cuentas',['saldo_base']),('deudas',['saldo_pendiente','cuota']),('posiciones',['precio_actual','precio_promedio'])]:
         for col in cols: c.execute(f'update {table} set {col}={col}*100')
