@@ -60,6 +60,29 @@ def render_workspace():
 
     if st.session_state.demo_mode:
         st.markdown('<div class="demo-banner">🧪 <b>Átomo Demo</b> · datos ficticios y espacio temporal. Podés probar sin tocar información real.</div>', unsafe_allow_html=True)
+        if not st.session_state.get("demo_intro_dismissed", False):
+            with st.container(key="demo_welcome"):
+                st.markdown("### Probalo sin miedo")
+                st.write(
+                    "No necesitás registrarte. Todo lo que ves es ficticio y tu prueba queda aislada "
+                    "de la de otras personas. Podés cargar, editar y explorar."
+                )
+                a, b, d = st.columns(3)
+                with a:
+                    if st.button("💸 Registrar un pago", key="demo_start_payment", width="stretch"):
+                        st.session_state.demo_intro_dismissed = True
+                        go("Pagos")
+                with b:
+                    if st.button("⚡ Ver Electro", key="demo_start_electro", width="stretch"):
+                        st.session_state.demo_intro_dismissed = True
+                        go("Electro")
+                with d:
+                    if st.button("🏦 Explorar cuentas", key="demo_start_accounts", width="stretch"):
+                        st.session_state.demo_intro_dismissed = True
+                        go("Cuentas")
+                if st.button("Seguir mirando", key="demo_intro_close"):
+                    st.session_state.demo_intro_dismissed = True
+                    st.rerun()
 
     with st.sidebar:
         if ATOMO_LOGO.exists():
