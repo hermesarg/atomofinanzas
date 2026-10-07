@@ -8,8 +8,9 @@ sys.path.insert(0,str(ROOT))
 from core.config import LIVE_DB
 from core.database import init_db,con,insert_movement,balances_df,positions_df
 from core.finance import money,period_summary,ai_context
+from core.clock import today as local_today
 init_db(LIVE_DB)
-today=date.today().isoformat()
+today=local_today().isoformat()
 with con(LIVE_DB) as c:
  for name,amount in [('A',100),('B',200)]:
   c.execute("INSERT INTO cuentas(nombre,tipo_cuenta,moneda,saldo_base,fecha_saldo_base,creada_en) VALUES (?,'Otra','ARS',?,?,?)",(name,amount,today,today))
