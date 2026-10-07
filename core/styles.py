@@ -173,12 +173,23 @@ def apply_styles():
         margin: .5rem 0;
     }
     .demo-banner {
-        border:1px solid #c7a72b;
-        background:#fff8d9;
-        color:#5b4a00;
-        border-radius:12px;
+        border:1px solid rgba(255,138,31,.30);
+        background:rgba(255,138,31,.08);
+        color:var(--text-color);
+        border-radius:14px;
         padding:.65rem .9rem;
         margin-bottom:.8rem;
+    }
+    .st-key-demo_welcome {
+        border:1px solid rgba(255,138,31,.20);
+        background:rgba(255,138,31,.035);
+        border-radius:18px;
+        padding:.8rem .9rem .9rem .9rem;
+        margin:0 0 .9rem 0;
+    }
+    .st-key-demo_welcome h3 {
+        margin-top:0 !important;
+        padding-top:0 !important;
     }
     
     .sidebar-avatar {
@@ -238,6 +249,69 @@ def apply_styles():
     .atomo-brand { margin-top: .1rem !important; }
     
     .at-muted, .electro-note, .compact-note, .atomo-kicker { color:var(--text-color); opacity:.76; }
+
+    /* Mobile final: gana sobre reglas anteriores y conserva modo claro/oscuro */
+    @media (max-width: 850px) {
+        .block-container {
+            max-width:100% !important;
+            padding-top:3rem !important;
+            padding-left:.65rem !important;
+            padding-right:.65rem !important;
+            padding-bottom:1.8rem !important;
+        }
+        .st-key-mobile_nav_stable {
+            display:block !important;
+            position:sticky;
+            top:2.75rem;
+            z-index:999;
+            padding:.2rem 0 .35rem 0;
+            margin-bottom:.35rem;
+            background:var(--background-color);
+            border-bottom:1px solid rgba(128,128,128,.14);
+            backdrop-filter:blur(12px);
+        }
+        .st-key-brand_header {
+            margin-bottom:.2rem !important;
+        }
+        .st-key-brand_header h1 {
+            line-height:1.08 !important;
+        }
+        .st-key-demo_welcome [data-testid="stHorizontalBlock"] {
+            flex-wrap:wrap !important;
+            gap:.35rem !important;
+        }
+        .st-key-demo_welcome [data-testid="stColumn"] {
+            min-width:100% !important;
+            flex:1 1 100% !important;
+        }
+        .st-key-demo_welcome button {
+            min-height:2.45rem !important;
+        }
+        .electro-card {
+            border-radius:16px;
+            padding:.72rem .72rem;
+        }
+        .electro-title {
+            font-size:1.35rem;
+        }
+        .electro-state {
+            font-size:.95rem;
+            line-height:1.35;
+        }
+        .electro-svg {
+            height:82px;
+            margin:.15rem 0 .25rem 0;
+        }
+        .electro-mini {
+            padding:.58rem;
+        }
+        [data-testid="stMetricValue"] {
+            font-size:1.55rem !important;
+        }
+        [data-testid="stSidebar"] {
+            max-width:min(88vw, 320px) !important;
+        }
+    }
     </style>
     """,
         unsafe_allow_html=True,
