@@ -527,8 +527,9 @@ def render_electro(e):
                 <stop offset="100%" stop-color="#ffd08b"/>
               </linearGradient>
             </defs>
-            <line class="electro-baseline" x1="0" y1="59" x2="760" y2="59" stroke-width="1"/>
-            <polyline class="electro-wave" points="{pts}" fill="none" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
+            <line class="electro-baseline" x1="0" y1="59" x2="760" y2="59" stroke="rgba(128,128,128,.16)" stroke-width="1"/>
+            <polyline points="{pts}" fill="none" stroke="#ff8a1f" stroke-opacity=".18" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="{pts}" fill="none" stroke="#ff9a3d" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/>
           </svg>
           <div class="electro-grid">
             <div class="electro-mini">
