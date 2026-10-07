@@ -16,6 +16,9 @@ assert not first.exception
 path1 = Path(first.session_state["_demo_db_path"])
 assert path1.exists()
 assert not any(x.label == "Contraseña" for x in first.text_input)
+assert any(x.label == "💸 Registrar un pago" for x in first.button)
+assert any(x.label == "⚡ Ver Electro" for x in first.button)
+assert any(x.label == "🏦 Explorar cuentas" for x in first.button)
 
 second = AppTest.from_file(str(ROOT / "app_demo.py"), default_timeout=30).run()
 assert not second.exception
@@ -30,4 +33,4 @@ with sqlite3.connect(path2) as c:
     before2 = c.execute("SELECT COUNT(*) FROM movimientos").fetchone()[0]
 
 assert before1 > 0 and before2 == before1
-print("PASS demo pública: sin login, datos ficticios y SQLite aislada por sesión")
+print("PASS demo pública: bienvenida visible, sin login, datos ficticios y SQLite aislada por sesión")
