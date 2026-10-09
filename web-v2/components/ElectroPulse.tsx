@@ -44,11 +44,11 @@ const PATHS: Record<ElectroBand, string> = {
 };
 
 const DURATIONS: Record<ElectroBand, number> = {
-  "muy-firme": 7.2,
-  firme: 6.3,
-  estable: 5.2,
-  vigilar: 4.0,
-  ajustado: 3.0
+  "muy-firme": 8.4,
+  firme: 7.2,
+  estable: 5.9,
+  vigilar: 4.5,
+  ajustado: 3.4
 };
 
 const LABELS: Record<ElectroBand, string> = {
@@ -92,32 +92,40 @@ export default function ElectroPulse({
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
           <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} transform={waveformTransform} />
+
+          <path
+            d={path}
+            className="electro-afterglow electro-afterglow-long"
+            pathLength="1"
+            strokeDasharray=".33 .67"
+            strokeDashoffset="1"
+            transform={waveformTransform}
+          >
+            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
+          </path>
+
+          <path
+            d={path}
+            className="electro-afterglow electro-afterglow-mid"
+            pathLength="1"
+            strokeDasharray=".24 .76"
+            strokeDashoffset="1"
+            transform={waveformTransform}
+          >
+            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
+          </path>
+
           <path
             id={pulseId}
             d={path}
             className="electro-line electro-window"
             pathLength="1"
-            strokeDasharray=".23 .77"
+            strokeDasharray=".17 .83"
             strokeDashoffset="1"
             transform={waveformTransform}
           >
             <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
           </path>
-          <path
-            d={path}
-            className="electro-trail"
-            pathLength="1"
-            strokeDasharray=".15 .85"
-            strokeDashoffset="1"
-            transform={waveformTransform}
-          >
-            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
-          </path>
-          <circle r="2.2" className="particle particle-head">
-            <animateMotion dur={duration + "s"} repeatCount="indefinite" rotate="auto">
-              <mpath href={"#" + pulseId} />
-            </animateMotion>
-          </circle>
         </svg>
         <div className="scan-light" />
       </div>
