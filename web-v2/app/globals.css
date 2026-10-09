@@ -641,11 +641,11 @@ button { color: inherit; }
 }
 
 /* El Electro tiene que leerse a simple vista, incluso en Muy firme. */
-.electro-stage { height:148px; }
+.electro-stage { height:138px; }
 .electro-line { stroke-width:6.6 !important; opacity:.98; }
 .electro-glow { stroke-width:7.2 !important; opacity:.035 !important; }
 .electro-baseline { stroke-width:1.25; opacity:.9; }
-.electro-large .electro-stage { height:238px; }
+.electro-large .electro-stage { height:214px; }
 .particle { filter:drop-shadow(0 0 7px rgba(255,138,31,.78)); }
 
 /* Tema explícito: evita depender sólo del tema del sistema. */
@@ -744,8 +744,8 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   .hero-side { gap:4px; }
   .mascot-home { width:66px; height:66px; border-radius:18px; }
   .balance-line { gap:7px; }
-  .electro-stage { height:132px; }
-  .electro-large .electro-stage { height:188px; }
+  .electro-stage { height:122px; }
+  .electro-large .electro-stage { height:170px; }
   .electro-line { stroke-width:6.4 !important; }
   .electro-glow { stroke-width:6.8 !important; opacity:.03 !important; }
   .mascot-level-wrap { width:68px; height:68px; border-radius:18px; }
@@ -772,8 +772,8 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 .electro-line {
   fill:none;
   stroke:#d9781f !important;
-  stroke-width:5.4 !important;
-  opacity:.90 !important;
+  stroke-width:3.3 !important;
+  opacity:.92 !important;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
@@ -788,8 +788,8 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 .electro-trail {
   fill:none;
   stroke:#ff9a3d;
-  stroke-width:24;
-  opacity:.055;
+  stroke-width:22;
+  opacity:.05;
   stroke-linecap:round;
   stroke-linejoin:round;
   filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
@@ -832,8 +832,8 @@ html[data-theme="light"] .electro-trail {
 }
 
 @media (max-width:900px) {
-  .electro-line { stroke-width:5.7 !important; }
-  .electro-trail { stroke-width:25px !important; }
+  .electro-line { stroke-width:3.5 !important; }
+  .electro-trail { stroke-width:22px !important; }
 }
 
 html[data-theme="dark"] .particle {
