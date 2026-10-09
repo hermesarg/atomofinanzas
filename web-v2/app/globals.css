@@ -788,16 +788,23 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 .electro-trail {
   fill:none;
   stroke:#ff9a3d;
-  stroke-width:18;
-  opacity:.085;
+  stroke-width:24;
+  opacity:.055;
   stroke-linecap:round;
   stroke-linejoin:round;
   filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
+.particle-halo {
+  fill:#ff9a3d;
+  opacity:.16;
+  filter:drop-shadow(0 0 7px rgba(255,138,31,.20));
+}
 .particle {
-  fill:#ff8a1f;
+  fill:#ffb457;
+  stroke:#4b270d;
+  stroke-width:1.6;
   opacity:1;
-  filter:drop-shadow(0 0 6px rgba(255,138,31,.62)) !important;
+  filter:drop-shadow(0 0 8px rgba(255,138,31,.78)) !important;
 }
 .scan-light { display:none !important; }
 .electro-glow { display:none !important; }
@@ -812,7 +819,7 @@ html[data-theme="dark"] .electro-shadow {
 }
 html[data-theme="dark"] .electro-trail {
   stroke:#ff9a3d;
-  opacity:.075;
+  opacity:.05;
   filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
 html[data-theme="light"] .electro-line {
@@ -821,10 +828,19 @@ html[data-theme="light"] .electro-line {
 }
 html[data-theme="light"] .electro-trail {
   stroke:#ef8b31;
-  opacity:.075;
+  opacity:.05;
 }
 
 @media (max-width:900px) {
   .electro-line { stroke-width:5.7 !important; }
-  .electro-trail { stroke-width:19px !important; }
+  .electro-trail { stroke-width:25px !important; }
+}
+
+html[data-theme="dark"] .particle {
+  fill:#ffb457;
+  stroke:#1a120d;
+}
+html[data-theme="light"] .particle {
+  fill:#ff9b35;
+  stroke:#6b330b;
 }
