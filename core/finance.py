@@ -469,9 +469,11 @@ def deterministic_suggestions(period, db=None, electro=None):
     return suggestions[:4], watch[0]
 
 def _ecg_points(score, width=760, height=105):
-    """Devuelve una polilínea determinista. Menor score => más irregularidad."""
+    """Señal determinista: firme = contenida; tensión = amplitud y ritmo irregulares."""
     score = max(0.0, min(100.0, float(score)))
     irr = (100.0 - score) / 100.0
+    # Curva no lineal para separar mucho más visualmente los extremos.
+    stress = irr ** 1.35
     base = height * .56
     points = [(0, base)]
     beats = 6
@@ -479,29 +481,36 @@ def _ecg_points(score, width=760, height=105):
 
     for i in range(beats):
         x0 = i * beat_w
-        shift = math.sin((i+1)*2.17) * 9 * irr
-        amp = 18 + 25 * irr + (i % 2) * 4 * irr
-        wobble = 2 + 9 * irr
+        phase = math.sin((i + 1) * 2.17)
+        shift = phase * (2 + 18 * stress)
+        amp = 8 + 40 * stress + (i % 3) * 5 * stress
+        wobble = 1.2 + 14 * stress
+        tail = 1 + 10 * stress
 
         pts = [
-            (x0 + 8, base + math.sin(i*1.7)*wobble),
-            (x0 + 28 + shift, base + math.cos(i*1.3)*wobble*.55),
-            (x0 + 38 + shift, base - 4 - wobble*.25),
-            (x0 + 46 + shift, base + 7 + wobble*.55),
-            (x0 + 55 + shift, base - amp),
-            (x0 + 65 + shift, base + amp*.62),
-            (x0 + 76 + shift, base - amp*.28),
-            (x0 + 92, base + math.sin(i*2.0)*wobble*.65),
-            (x0 + beat_w - 3, base + math.cos(i*1.8)*wobble*.35),
+            (x0 + 7, base + math.sin(i * 1.7) * wobble * .35),
+            (x0 + 28 + shift, base + math.cos(i * 1.3) * wobble * .30),
+            (x0 + 40 + shift, base - 2.5 - wobble * .15),
+            (x0 + 48 + shift, base + 3 + wobble * .30),
+            (x0 + 56 + shift, base - amp),
+            (x0 + 65 + shift, base + amp * (.42 + .22 * stress)),
+            (x0 + 75 + shift, base - amp * (.16 + .20 * stress)),
+            (x0 + 93, base + math.sin(i * 2.0) * tail * .42),
+            (x0 + beat_w - 3, base + math.cos(i * 1.8) * tail * .22),
         ]
 
-        if irr > .55:
-            pts.insert(2, (x0 + 33 + shift, base - 10*irr))
-            pts.insert(8, (x0 + 84 + shift, base + 11*irr))
+        if stress > .35:
+            pts.insert(2, (x0 + 34 + shift, base - (4 + 18 * stress)))
+        if stress > .62:
+            pts.insert(8, (x0 + 83 + shift, base + (6 + 20 * stress)))
+            pts.insert(9, (x0 + 88 - shift * .25, base - (3 + 14 * stress)))
 
         points.extend(pts)
 
-    return " ".join(f"{max(0,min(width,x)):.1f},{max(5,min(height-5,y)):.1f}" for x,y in points)
+    return " ".join(
+        f"{max(0,min(width,x)):.1f},{max(5,min(height-5,y)):.1f}"
+        for x, y in points
+    )
 
 def render_electro(e):
     pts = _ecg_points(100 - e["tension"])
@@ -528,8 +537,8 @@ def render_electro(e):
               </linearGradient>
             </defs>
             <line class="electro-baseline" x1="0" y1="59" x2="760" y2="59" stroke="rgba(128,128,128,.16)" stroke-width="1"/>
-            <polyline points="{pts}" fill="none" stroke="#ff8a1f" stroke-opacity=".18" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round"/>
-            <polyline points="{pts}" fill="none" stroke="#ff9a3d" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="{pts}" fill="none" stroke="#ff8a1f" stroke-opacity=".14" stroke-width="5.2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="{pts}" fill="none" stroke="#ff9a3d" stroke-width="2.15" stroke-linejoin="round" stroke-linecap="round"/>
           </svg>
           <div class="electro-grid">
             <div class="electro-mini">
@@ -612,8 +621,7 @@ def yield_snapshot(db=None, days=30, balances=None):
 # =========================================================
 
 LEVELS = [
-    ("Partícula", "Todavía falta estructura o faltan datos clave."),
-    ("Átomo", "Ya hay una base mínima de orden financiero."),
+    ("Átomo", "Punto de partida: empezás a ordenar y darle estructura a tus finanzas."),
     ("Agua", "Estado base: estabilidad razonable y manejo cotidiano sano."),
     ("Carbono", "Empezás a construir una estructura más flexible y útil."),
     ("Cadena", "Se nota continuidad y mejores hábitos."),
@@ -623,7 +631,9 @@ LEVELS = [
     ("ADN", "Nivel alto de organización, consistencia y criterio."),
 ]
 
-_LEVEL_THRESHOLDS = [18, 30, 42, 54, 65, 74, 82, 90, 101]
+# Se preservan los umbrales de los niveles existentes: sólo desaparece
+# "Partícula". Un usuario nuevo arranca siempre en Átomo.
+_LEVEL_THRESHOLDS = [30, 42, 54, 65, 74, 82, 90, 101]
 
 
 def atomo_profile(period, db=None, electro=None):
