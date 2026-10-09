@@ -147,7 +147,9 @@ export default function DashboardShell() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <button className="brand-mark" aria-label="Ir al inicio" onClick={() => setTab("Inicio")}><span>Á</span></button>
+        <button className="brand-mark" aria-label="Ir al inicio" onClick={() => setTab("Inicio")}>
+          <img className="brand-logo" src="/atomo_favicon.png" alt="Átomo Finanzas" />
+        </button>
         <div className="brand-copy">
           <strong>Átomo Finanzas</strong>
           <span>Las cuentas las hago yo. Las decisiones, vos.</span>
