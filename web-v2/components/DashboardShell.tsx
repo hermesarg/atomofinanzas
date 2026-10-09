@@ -336,7 +336,7 @@ function Home(props: {
             <p>{props.periodLabel}</p>
           </div>
           <div className="hero-side">
-            <img className="mascot-home" src="/atomo_favicon.png" alt="Átomo, mascota de Átomo Finanzas" />
+            <img className="mascot-home" src="/atomo_avatar.png" alt="Átomo, mascota de Átomo Finanzas" />
             <div className="period-pill">Período activo</div>
           </div>
         </div>
