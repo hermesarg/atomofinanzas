@@ -772,16 +772,16 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 .electro-line {
   fill:none;
   stroke:#d9781f !important;
-  stroke-width:3.3 !important;
-  opacity:.92 !important;
+  stroke-width:2.75 !important;
+  opacity:.94 !important;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
 .electro-shadow {
   fill:none;
   stroke:#ff8a1f;
-  stroke-width:10.5;
-  opacity:.035;
+  stroke-width:9;
+  opacity:.018;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
@@ -832,7 +832,7 @@ html[data-theme="light"] .electro-trail {
 }
 
 @media (max-width:900px) {
-  .electro-line { stroke-width:3.5 !important; }
+  .electro-line { stroke-width:2.95 !important; }
   .electro-trail { stroke-width:22px !important; }
 }
 
