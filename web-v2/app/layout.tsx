@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FinanceProvider } from "@/lib/store";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
   title: "Átomo Finanzas",
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es">
       <body>
-        <FinanceProvider>{children}</FinanceProvider>
+        <FinanceProvider><ServiceWorkerRegistrar />{children}</FinanceProvider>
       </body>
     </html>
   );
