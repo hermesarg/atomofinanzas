@@ -28,6 +28,8 @@ jobs:
         run: python tests/check_periods.py
       - name: Public demo isolation
         run: python tests/check_demo.py
+      - name: Electro and profile
+        run: python tests/check_electro_profile.py
       - name: Accounting history
         run: python tests/check_history_accounting.py
       - name: Quick flows
