@@ -44,9 +44,9 @@ const PATHS: Record<ElectroBand, string> = {
 };
 
 const DURATIONS: Record<ElectroBand, number> = {
-  "muy-firme": 5.8,
-  firme: 4.9,
-  estable: 4.0,
+  "muy-firme": 5.2,
+  firme: 4.6,
+  estable: 3.9,
   vigilar: 3.1,
   ajustado: 2.35
 };
@@ -92,8 +92,10 @@ export default function ElectroPulse({
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
           <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} transform={waveformTransform} />
-          <path id={pulseId} d={path} className="electro-line" pathLength="1" transform={waveformTransform} />
-          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".18 .82" strokeDashoffset="1" transform={waveformTransform}>
+          <path id={pulseId} d={path} className="electro-line" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform={waveformTransform}>
+            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
+          </path>
+          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".11 .89" strokeDashoffset="1" transform={waveformTransform}>
             <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
           </path>
           <g className="particles">
