@@ -794,17 +794,15 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   stroke-linejoin:round;
   filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
-.particle-halo {
-  fill:#ff9a3d;
-  opacity:.16;
-  filter:drop-shadow(0 0 7px rgba(255,138,31,.20));
-}
+.particle-halo { display:none; }
 .particle {
   fill:#ffb457;
-  stroke:#4b270d;
-  stroke-width:1.6;
-  opacity:1;
-  filter:drop-shadow(0 0 8px rgba(255,138,31,.78)) !important;
+  stroke:none;
+  opacity:.18;
+  filter:drop-shadow(0 0 4px rgba(255,138,31,.30)) !important;
+}
+.particle-head {
+  opacity:.14;
 }
 .scan-light { display:none !important; }
 .electro-glow { display:none !important; }
@@ -843,4 +841,23 @@ html[data-theme="dark"] .particle {
 html[data-theme="light"] .particle {
   fill:#ff9b35;
   stroke:#6b330b;
+}
+
+
+/* --- Electro monitor: sólo queda visible el tramo reciente del barrido --- */
+.electro-window {
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.electro-shadow {
+  opacity:.008 !important;
+}
+.electro-trail {
+  opacity:.045 !important;
+}
+html[data-theme="dark"] .electro-trail {
+  opacity:.04 !important;
+}
+html[data-theme="light"] .electro-trail {
+  opacity:.04 !important;
 }
