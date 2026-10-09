@@ -57,12 +57,12 @@ export default function ElectroPulse({
         <svg viewBox="0 0 760 120" preserveAspectRatio="none" role="img" aria-label={"Señal " + LABELS[state]}>
           <defs>
             <linearGradient id={gradientId} x1="0" x2="1">
-              <stop offset="0%" stopColor="#ff6f16" />
-              <stop offset="48%" stopColor="#ff983d" />
-              <stop offset="100%" stopColor="#ffd19e" />
+              <stop offset="0%" stopColor="#c85c0b" />
+              <stop offset="48%" stopColor="#e67818" />
+              <stop offset="100%" stopColor="#b84d08" />
             </linearGradient>
             <filter id={glowId} x="-20%" y="-50%" width="140%" height="200%">
-              <feGaussianBlur stdDeviation="4.2" result="blur" />
+              <feGaussianBlur stdDeviation="2.2" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
