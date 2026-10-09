@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   title: "Átomo Finanzas",
   description: "Las cuentas las hago yo. Las decisiones, vos.",
   applicationName: "Átomo Finanzas",
-  manifest: "/manifest.webmanifest"
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/atomo_favicon.png",
+    apple: "/atomo_favicon.png"
+  }
 };
 
 export const viewport: Viewport = {
