@@ -609,10 +609,12 @@ button { color: inherit; }
   gap:10px;
 }
 .mascot-home {
-  width:100px;
-  height:100px;
-  object-fit:contain;
-  filter:drop-shadow(0 12px 20px rgba(0,0,0,.14));
+  width:88px;
+  height:88px;
+  object-fit:cover;
+  border-radius:22px;
+  background:transparent;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.16));
   animation:mascotFloat 4.5s ease-in-out infinite;
 }
 .mascot-level-wrap {
@@ -640,8 +642,8 @@ button { color: inherit; }
 
 /* El Electro tiene que leerse a simple vista, incluso en Muy firme. */
 .electro-stage { height:148px; }
-.electro-line { stroke-width:6.25 !important; }
-.electro-glow { stroke-width:7.6 !important; opacity:.055 !important; }
+.electro-line { stroke-width:6.6 !important; opacity:.98; }
+.electro-glow { stroke-width:7.2 !important; opacity:.035 !important; }
 .electro-baseline { stroke-width:1.25; opacity:.9; }
 .electro-large .electro-stage { height:238px; }
 .particle { filter:drop-shadow(0 0 7px rgba(255,138,31,.78)); }
@@ -740,12 +742,12 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 @media (max-width:900px) {
   .theme-toggle { width:34px; height:34px; border-radius:11px; }
   .hero-side { gap:4px; }
-  .mascot-home { width:68px; height:68px; }
+  .mascot-home { width:66px; height:66px; border-radius:18px; }
   .balance-line { gap:7px; }
   .electro-stage { height:132px; }
   .electro-large .electro-stage { height:188px; }
-  .electro-line { stroke-width:6.1 !important; }
-  .electro-glow { stroke-width:7.2 !important; opacity:.05 !important; }
+  .electro-line { stroke-width:6.4 !important; }
+  .electro-glow { stroke-width:6.8 !important; opacity:.03 !important; }
   .mascot-level-wrap { width:68px; height:68px; border-radius:18px; }
   .mascot-level-wrap.large { width:72px; height:72px; }
   html[data-theme="dark"] body { background:#0f1115; }
