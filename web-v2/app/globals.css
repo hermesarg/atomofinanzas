@@ -639,8 +639,8 @@ button { color: inherit; }
 
 /* El Electro tiene que leerse a simple vista, incluso en Muy firme. */
 .electro-stage { height:148px; }
-.electro-line { stroke-width:3.9 !important; }
-.electro-glow { stroke-width:10 !important; opacity:.16 !important; }
+.electro-line { stroke-width:5.35 !important; }
+.electro-glow { stroke-width:14 !important; opacity:.18 !important; }
 .electro-baseline { stroke-width:1.25; opacity:.9; }
 .electro-large .electro-stage { height:238px; }
 .particle { filter:drop-shadow(0 0 7px rgba(255,138,31,.78)); }
@@ -743,8 +743,8 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   .balance-line { gap:7px; }
   .electro-stage { height:132px; }
   .electro-large .electro-stage { height:188px; }
-  .electro-line { stroke-width:4.25 !important; }
-  .electro-glow { stroke-width:10.5 !important; }
+  .electro-line { stroke-width:5.8 !important; }
+  .electro-glow { stroke-width:14.5 !important; }
   .mascot-level-wrap { width:68px; height:68px; border-radius:18px; }
   .mascot-level-wrap.large { width:72px; height:72px; }
   html[data-theme="dark"] body { background:#0f1115; }
