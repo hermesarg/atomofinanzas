@@ -69,6 +69,7 @@ export default function ElectroPulse({
   const path = PATHS[state];
   const pulseId = "pulsePath-" + state;
   const duration = DURATIONS[state];
+  const waveformTransform = "translate(0 62) scale(1 0.76) translate(0 -62)";
   const glowId = "softGlow-" + state;
 
   return (
@@ -90,9 +91,9 @@ export default function ElectroPulse({
             </filter>
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
-          <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} />
-          <path id={pulseId} d={path} className="electro-line" pathLength="1" />
-          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".18 .82" strokeDashoffset="1">
+          <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} transform={waveformTransform} />
+          <path id={pulseId} d={path} className="electro-line" pathLength="1" transform={waveformTransform} />
+          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".18 .82" strokeDashoffset="1" transform={waveformTransform}>
             <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
           </path>
           <g className="particles">
