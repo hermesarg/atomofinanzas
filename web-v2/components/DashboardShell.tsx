@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ElectroPulse from "./ElectroPulse";
+import AnimatedMoney from "./AnimatedMoney";
+import ActionFlash from "./ActionFlash";
 import { useFinance } from "@/lib/store";
 import type { MovementType } from "@/lib/types";
 
@@ -31,6 +33,7 @@ export default function DashboardShell() {
   const [action, setAction] = useState<ActionKind>(null);
   const [expanded, setExpanded] = useState(false);
   const [notice, setNotice] = useState("");
+  const [flash, setFlash] = useState<"income" | "expense" | "transfer" | null>(null);
   const [query, setQuery] = useState("");
 
   const [title, setTitle] = useState("");
@@ -101,6 +104,8 @@ export default function DashboardShell() {
     });
 
     setNotice(action === "income" ? "Dinero agregado" : action === "expense" ? "Salida registrada" : "Transferencia registrada");
+    setFlash(action);
+    window.setTimeout(() => setFlash(null), 900);
     setAction(null);
   }
 
@@ -239,6 +244,7 @@ export default function DashboardShell() {
         <p className="prototype-note">V2 en paralelo · estas pruebas quedan sólo en este navegador.</p>
       </form>
 
+      <ActionFlash kind={flash ?? "transfer"} active={Boolean(flash)} />
       <div className={"toast " + (notice ? "show" : "")} role="status">{notice}</div>
     </main>
   );
@@ -268,7 +274,7 @@ function Home(props: {
         <div className="hero-top">
           <div>
             <span className="eyebrow">DISPONIBLE</span>
-            <h1>{pesos.format(Math.max(0, props.available))}</h1>
+            <h1><AnimatedMoney value={Math.max(0, props.available)} /></h1>
             <p>{props.periodLabel}</p>
           </div>
           <div className="period-pill">Período activo</div>
@@ -307,9 +313,9 @@ function Home(props: {
               <span className="tiny-score">{electro.overall}/100</span>
             </div>
             <div className="summary-strip">
-              <div><span>Entró</span><strong className="amount-in">{signedMoney(electro.income)}</strong></div>
-              <div><span>Salió</span><strong className="amount-out">{signedMoney(-electro.expenses)}</strong></div>
-              <div><span>Balance</span><strong className={electro.balance >= 0 ? "amount-in" : "amount-out"}>{signedMoney(electro.balance)}</strong></div>
+              <div><span>Entró</span><strong className="amount-in"><AnimatedMoney value={electro.income} prefix="+ " /></strong></div>
+              <div><span>Salió</span><strong className="amount-out"><AnimatedMoney value={electro.expenses} prefix="− " /></strong></div>
+              <div><span>Balance</span><strong className={electro.balance >= 0 ? "amount-in" : "amount-out"}><AnimatedMoney value={Math.abs(electro.balance)} prefix={electro.balance >= 0 ? "+ " : "− "} /></strong></div>
             </div>
           </section>
 
