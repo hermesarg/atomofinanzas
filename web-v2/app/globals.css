@@ -751,3 +751,16 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   html[data-theme="dark"] body { background:#0f1115; }
   html[data-theme="light"] body { background:#f6f7f8; }
 }
+
+/* Logo de cabecera con la cara de Átomo */
+.brand-mark {
+  overflow:hidden;
+  padding:0 !important;
+}
+.brand-logo {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  border-radius:inherit;
+}
