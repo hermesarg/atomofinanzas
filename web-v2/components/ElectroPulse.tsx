@@ -12,9 +12,9 @@ type ElectroPulseProps = {
 
 const PATHS: Record<ElectroBand, string> = {
   "muy-firme":
-    "M0 62 L72 62 L92 60 L100 67 L109 51 L118 73 L128 60 L188 62 L260 62 L280 60 L288 67 L297 51 L306 73 L316 60 L376 62 L448 62 L468 60 L476 67 L485 51 L494 73 L504 60 L564 62 L636 62 L656 60 L664 67 L673 51 L682 73 L692 60 L760 62",
+    "M0 62 L88 62 L103 60 L112 66 L120 50 L128 82 L137 27 L148 96 L160 54 L174 64 L190 62 L276 62 L291 60 L300 66 L308 50 L316 82 L325 27 L336 96 L348 54 L362 64 L378 62 L464 62 L479 60 L488 66 L496 50 L504 82 L513 27 L524 96 L536 54 L550 64 L566 62 L652 62 L667 60 L676 66 L684 50 L692 82 L701 27 L712 96 L724 54 L738 64 L760 62",
   firme:
-    "M0 62 L56 62 L74 58 L83 72 L93 42 L104 82 L116 58 L150 62 L214 62 L232 57 L242 74 L252 38 L264 86 L278 57 L314 62 L378 62 L396 58 L406 73 L416 40 L428 84 L442 58 L478 62 L542 62 L560 57 L570 74 L580 39 L592 85 L606 58 L642 62 L706 62 L724 58 L734 72 L744 43 L754 81 L760 62",
+    "M0 62 L62 62 L78 58 L88 70 L98 46 L109 84 L119 31 L131 94 L144 52 L160 66 L176 62 L218 62 L234 58 L244 70 L254 46 L265 84 L275 31 L287 94 L300 52 L316 66 L332 62 L374 62 L390 58 L400 70 L410 46 L421 84 L431 31 L443 94 L456 52 L472 66 L488 62 L530 62 L546 58 L556 70 L566 46 L577 84 L587 31 L599 94 L612 52 L628 66 L644 62 L686 62 L702 58 L712 70 L722 46 L733 84 L743 33 L754 90 L760 62",
   estable:
     "M0 62 L48 62 L66 56 L78 77 L90 36 L103 88 L118 54 L134 69 L176 62 L196 54 L208 79 L220 32 L234 92 L250 52 L268 71 L310 62 L330 53 L342 80 L354 30 L368 94 L384 50 L402 72 L444 62 L464 54 L476 78 L488 34 L502 91 L518 52 L536 70 L578 62 L598 53 L610 81 L622 31 L636 93 L652 51 L670 72 L712 62 L732 55 L744 78 L756 42 L760 62",
   vigilar:
@@ -49,7 +49,6 @@ export default function ElectroPulse({
   const path = PATHS[state];
   const pulseId = "pulsePath-" + state;
   const duration = DURATIONS[state];
-  const gradientId = "pulseGradient-" + state;
   const glowId = "softGlow-" + state;
 
   return (
@@ -65,32 +64,20 @@ export default function ElectroPulse({
       <div className="electro-stage">
         <svg viewBox="0 0 760 120" preserveAspectRatio="none" role="img" aria-label={"Señal " + LABELS[state]}>
           <defs>
-            <linearGradient id={gradientId} x1="0" x2="1">
-              <stop offset="0%" stopColor="#c85c0b" />
-              <stop offset="48%" stopColor="#e67818" />
-              <stop offset="100%" stopColor="#b84d08" />
-            </linearGradient>
             <filter id={glowId} x="-20%" y="-50%" width="140%" height="200%">
-              <feGaussianBlur stdDeviation="1.6" result="blur" />
+              <feGaussianBlur stdDeviation="1.2" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
-          <path d={path} className="electro-glow" pathLength="1" filter={"url(#" + glowId + ")"} />
-          <path id={pulseId} d={path} className="electro-line" pathLength="1" stroke={"url(#" + gradientId + ")"} />
+          <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} />
+          <path id={pulseId} d={path} className="electro-line" pathLength="1" />
+          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".18 .82" strokeDashoffset="1">
+            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
+          </path>
           <g className="particles">
-            <circle r="4.2" className="particle p1">
+            <circle r="4.4" className="particle p1">
               <animateMotion dur={duration + "s"} repeatCount="indefinite" rotate="auto">
-                <mpath href={"#" + pulseId} />
-              </animateMotion>
-            </circle>
-            <circle r="3" className="particle p2">
-              <animateMotion dur={duration + "s"} begin={-(duration / 3) + "s"} repeatCount="indefinite" rotate="auto">
-                <mpath href={"#" + pulseId} />
-              </animateMotion>
-            </circle>
-            <circle r="2.1" className="particle p3">
-              <animateMotion dur={duration + "s"} begin={-(2 * duration / 3) + "s"} repeatCount="indefinite" rotate="auto">
                 <mpath href={"#" + pulseId} />
               </animateMotion>
             </circle>
