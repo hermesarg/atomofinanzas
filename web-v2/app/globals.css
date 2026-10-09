@@ -768,63 +768,63 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
 }
 
 
-/* --- Electro final: trazo ECG naranja, contraste moderado y estela --- */
+/* --- Electro final: naranja medio, estela ancha y casi transparente --- */
 .electro-line {
   fill:none;
-  stroke:#d9771e !important;
-  stroke-width:5.5 !important;
-  opacity:.92 !important;
+  stroke:#d9781f !important;
+  stroke-width:5.4 !important;
+  opacity:.90 !important;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
 .electro-shadow {
   fill:none;
   stroke:#ff8a1f;
-  stroke-width:8;
-  opacity:.055;
+  stroke-width:10.5;
+  opacity:.035;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
 .electro-trail {
   fill:none;
   stroke:#ff9a3d;
-  stroke-width:8.4;
-  opacity:.25;
+  stroke-width:18;
+  opacity:.085;
   stroke-linecap:round;
   stroke-linejoin:round;
-  filter:drop-shadow(0 0 3px rgba(255,138,31,.20));
+  filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
 .particle {
-  fill:#ff9a3d;
-  opacity:.96;
-  filter:drop-shadow(0 0 5px rgba(255,138,31,.55)) !important;
+  fill:#ff8a1f;
+  opacity:1;
+  filter:drop-shadow(0 0 6px rgba(255,138,31,.62)) !important;
 }
 .scan-light { display:none !important; }
 .electro-glow { display:none !important; }
 
 html[data-theme="dark"] .electro-line {
-  stroke:#e88a2d !important;
-  opacity:.94 !important;
+  stroke:#dc8128 !important;
+  opacity:.92 !important;
 }
 html[data-theme="dark"] .electro-shadow {
   stroke:#ff8a1f;
-  opacity:.045;
+  opacity:.03;
 }
 html[data-theme="dark"] .electro-trail {
   stroke:#ff9a3d;
-  opacity:.22;
-  filter:drop-shadow(0 0 3px rgba(255,138,31,.20));
+  opacity:.075;
+  filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
 html[data-theme="light"] .electro-line {
-  stroke:#c86a18 !important;
-  opacity:.92 !important;
+  stroke:#c96a18 !important;
+  opacity:.90 !important;
 }
 html[data-theme="light"] .electro-trail {
-  stroke:#e98a32;
-  opacity:.20;
+  stroke:#ef8b31;
+  opacity:.075;
 }
 
 @media (max-width:900px) {
-  .electro-line { stroke-width:5.8 !important; }
-  .electro-trail { stroke-width:8.6 !important; }
+  .electro-line { stroke-width:5.7 !important; }
+  .electro-trail { stroke-width:19px !important; }
 }
