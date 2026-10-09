@@ -1,0 +1,35 @@
+name: V2 web
+
+on:
+  push:
+    branches: [v2-modern]
+    paths:
+      - "web-v2/**"
+      - ".github/workflows/v2.yml"
+  pull_request:
+    paths:
+      - "web-v2/**"
+
+concurrency:
+  group: v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-v2/package-lock.json
+      - name: Install
+        run: npm install --package-lock-only && npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
