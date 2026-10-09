@@ -118,7 +118,9 @@ export function calculateAtomoLevel(state: FinanceState, electro: ElectroResult)
 
   const prev = idx === 0 ? 0 : thresholds[idx - 1];
   const nextThreshold = thresholds[idx];
-  const progress = idx === LEVELS.length - 1 ? 1 : clamp((score - prev) / Math.max(1, nextThreshold - prev)) / 100;
+  const progress = idx === LEVELS.length - 1
+    ? 1
+    : Math.max(0, Math.min(1, (score - prev) / Math.max(1, nextThreshold - prev)));
 
   return {
     name: LEVELS[idx][0],
