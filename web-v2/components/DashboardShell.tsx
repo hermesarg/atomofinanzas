@@ -336,7 +336,7 @@ function Home(props: {
             <p>{props.periodLabel}</p>
           </div>
           <div className="hero-side">
-            <img className="mascot-home" src="/atomo_avatar.png" alt="Átomo, mascota de Átomo Finanzas" />
+            <img className="mascot-home" src="/atomo_favicon.png" alt="Átomo, mascota de Átomo Finanzas" />
             <div className="period-pill">Período activo</div>
           </div>
         </div>
@@ -401,7 +401,7 @@ function Home(props: {
 
           <section className="card atom-level-card">
             <div className="mascot-level-wrap">
-              <img className="mascot-level" src="/atomo_avatar.png" alt="" aria-hidden="true" />
+              <img className="mascot-level" src="/atomo_favicon.png" alt="" aria-hidden="true" />
             </div>
             <div>
               <span className="eyebrow">TU EVOLUCIÓN</span>
@@ -475,7 +475,7 @@ function ElectroView(props: {
 
       <section className="card evolution-wide">
         <div className="mascot-level-wrap large">
-          <img className="mascot-level" src="/atomo_avatar.png" alt="Átomo, mascota de Átomo Finanzas" />
+          <img className="mascot-level" src="/atomo_favicon.png" alt="Átomo, mascota de Átomo Finanzas" />
         </div>
         <div className="evolution-copy">
           <span className="eyebrow">EVOLUCIÓN</span>
