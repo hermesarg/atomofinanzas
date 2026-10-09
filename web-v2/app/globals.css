@@ -766,3 +766,64 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   display:block;
   border-radius:inherit;
 }
+
+
+/* --- Electro final: trazo real, alto contraste y estela --- */
+.electro-line {
+  fill:none;
+  stroke:#353b44 !important;
+  stroke-width:5.8 !important;
+  opacity:.96 !important;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.electro-shadow {
+  fill:none;
+  stroke:#111820;
+  stroke-width:8.2;
+  opacity:.08;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.electro-trail {
+  fill:none;
+  stroke:#69717c;
+  stroke-width:8.6;
+  opacity:.48;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 4px rgba(105,113,124,.28));
+}
+.particle {
+  fill:#ff8a1f;
+  opacity:.96;
+  filter:drop-shadow(0 0 5px rgba(255,138,31,.52)) !important;
+}
+.scan-light { display:none !important; }
+.electro-glow { display:none !important; }
+
+html[data-theme="dark"] .electro-line {
+  stroke:#e7ebf1 !important;
+  opacity:.92 !important;
+}
+html[data-theme="dark"] .electro-shadow {
+  stroke:#f3f5f8;
+  opacity:.05;
+}
+html[data-theme="dark"] .electro-trail {
+  stroke:#ffffff;
+  opacity:.55;
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.30));
+}
+html[data-theme="light"] .electro-line {
+  stroke:#2f353d !important;
+}
+html[data-theme="light"] .electro-trail {
+  stroke:#59616c;
+  opacity:.42;
+}
+
+@media (max-width:900px) {
+  .electro-line { stroke-width:6.1 !important; }
+  .electro-trail { stroke-width:8.8 !important; }
+}
