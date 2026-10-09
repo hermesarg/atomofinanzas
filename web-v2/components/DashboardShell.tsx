@@ -35,11 +35,26 @@ export default function DashboardShell() {
   const [notice, setNotice] = useState("");
   const [flash, setFlash] = useState<"income" | "expense" | "transfer" | null>(null);
   const [query, setQuery] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [showAvailable, setShowAvailable] = useState(true);
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState(state.accounts[0]?.id ?? "");
   const [destinationAccountId, setDestinationAccountId] = useState(state.accounts[1]?.id ?? "");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("atomo-theme");
+    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const nextTheme = savedTheme === "dark" || savedTheme === "light"
+      ? savedTheme
+      : (systemDark ? "dark" : "light");
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+
+    const savedVisibility = localStorage.getItem("atomo-show-available");
+    if (savedVisibility === "false") setShowAvailable(false);
+  }, []);
 
   useEffect(() => {
     if (!notice) return;
@@ -72,11 +87,26 @@ export default function DashboardShell() {
     setAction(kind);
   }
 
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("atomo-theme", next);
+  }
+
+  function toggleAvailable() {
+    setShowAvailable(value => {
+      const next = !value;
+      localStorage.setItem("atomo-show-available", String(next));
+      return next;
+    });
+  }
+
   function submitMovement(event: FormEvent) {
     event.preventDefault();
     if (!action) return;
 
-    const numeric = Number(amount.replace(/./g, "").replace(",", "."));
+    const numeric = Number(amount.split(".").join("").replace(",", "."));
     if (!Number.isFinite(numeric) || numeric <= 0) {
       setNotice("Revisá el monto");
       return;
@@ -129,10 +159,20 @@ export default function DashboardShell() {
           ))}
         </nav>
 
-        <button className="profile-chip" onClick={() => setTab("Más")} aria-label="Perfil">
-          <span className="avatar-mini">M</span>
-          <span className="profile-copy"><strong>Mi espacio</strong><small>Privado</small></span>
-        </button>
+        <div className="top-actions">
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Usar modo claro" : "Usar modo oscuro"}
+            title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+          >
+            <span>{theme === "dark" ? "☀" : "☾"}</span>
+          </button>
+          <button className="profile-chip" onClick={() => setTab("Más")} aria-label="Perfil">
+            <span className="avatar-mini">M</span>
+            <span className="profile-copy"><strong>Mi espacio</strong><small>Privado</small></span>
+          </button>
+        </div>
       </header>
 
       <div className="workspace">
@@ -152,6 +192,8 @@ export default function DashboardShell() {
             bufferTarget={state.bufferTarget}
             onGoMovements={() => setTab("Movimientos")}
             onGoElectro={() => setTab("Electro")}
+            showAvailable={showAvailable}
+            onToggleAvailable={toggleAvailable}
           />
         )}
 
@@ -265,6 +307,8 @@ function Home(props: {
   bufferTarget: number;
   onGoMovements: () => void;
   onGoElectro: () => void;
+  showAvailable: boolean;
+  onToggleAvailable: () => void;
 }) {
   const { electro, level } = props;
 
@@ -272,12 +316,29 @@ function Home(props: {
     <>
       <section className="hero-card entrance entrance-1">
         <div className="hero-top">
-          <div>
+          <div className="hero-balance">
             <span className="eyebrow">DISPONIBLE</span>
-            <h1><AnimatedMoney value={Math.max(0, props.available)} /></h1>
+            <div className="balance-line">
+              <h1>
+                {props.showAvailable
+                  ? <AnimatedMoney value={Math.max(0, props.available)} />
+                  : <span className="masked-balance">$ ••••••</span>}
+              </h1>
+              <button
+                className={"eye-button " + (props.showAvailable ? "" : "hidden")}
+                onClick={props.onToggleAvailable}
+                aria-label={props.showAvailable ? "Ocultar saldo disponible" : "Mostrar saldo disponible"}
+                title={props.showAvailable ? "Ocultar saldo" : "Mostrar saldo"}
+              >
+                <span>{props.showAvailable ? "◉" : "◌"}</span>
+              </button>
+            </div>
             <p>{props.periodLabel}</p>
           </div>
-          <div className="period-pill">Período activo</div>
+          <div className="hero-side">
+            <img className="mascot-home" src="/atomo_avatar.png" alt="Átomo, mascota de Átomo Finanzas" />
+            <div className="period-pill">Período activo</div>
+          </div>
         </div>
 
         <div className="primary-actions">
@@ -339,10 +400,8 @@ function Home(props: {
           </button>
 
           <section className="card atom-level-card">
-            <div className="atom-orbit" aria-hidden="true">
-              <span className="nucleus">Á</span>
-              <i className="orbit orbit-a"><b /></i>
-              <i className="orbit orbit-b"><b /></i>
+            <div className="mascot-level-wrap">
+              <img className="mascot-level" src="/atomo_avatar.png" alt="" aria-hidden="true" />
             </div>
             <div>
               <span className="eyebrow">TU EVOLUCIÓN</span>
@@ -415,10 +474,8 @@ function ElectroView(props: {
       </div>
 
       <section className="card evolution-wide">
-        <div className="atom-orbit" aria-hidden="true">
-          <span className="nucleus">Á</span>
-          <i className="orbit orbit-a"><b /></i>
-          <i className="orbit orbit-b"><b /></i>
+        <div className="mascot-level-wrap large">
+          <img className="mascot-level" src="/atomo_avatar.png" alt="Átomo, mascota de Átomo Finanzas" />
         </div>
         <div className="evolution-copy">
           <span className="eyebrow">EVOLUCIÓN</span>
