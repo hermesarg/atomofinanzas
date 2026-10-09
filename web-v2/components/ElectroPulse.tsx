@@ -44,11 +44,11 @@ const PATHS: Record<ElectroBand, string> = {
 };
 
 const DURATIONS: Record<ElectroBand, number> = {
-  "muy-firme": 5.2,
-  firme: 4.6,
-  estable: 3.9,
-  vigilar: 3.1,
-  ajustado: 2.35
+  "muy-firme": 7.2,
+  firme: 6.3,
+  estable: 5.2,
+  vigilar: 4.0,
+  ajustado: 3.0
 };
 
 const LABELS: Record<ElectroBand, string> = {
@@ -92,24 +92,32 @@ export default function ElectroPulse({
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
           <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} transform={waveformTransform} />
-          <path id={pulseId} d={path} className="electro-line" pathLength="1" strokeDasharray="1" strokeDashoffset="1" transform={waveformTransform}>
+          <path
+            id={pulseId}
+            d={path}
+            className="electro-line electro-window"
+            pathLength="1"
+            strokeDasharray=".23 .77"
+            strokeDashoffset="1"
+            transform={waveformTransform}
+          >
             <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
           </path>
-          <path d={path} className="electro-trail" pathLength="1" strokeDasharray=".11 .89" strokeDashoffset="1" transform={waveformTransform}>
+          <path
+            d={path}
+            className="electro-trail"
+            pathLength="1"
+            strokeDasharray=".15 .85"
+            strokeDashoffset="1"
+            transform={waveformTransform}
+          >
             <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
           </path>
-          <g className="particles">
-            <circle r="9.2" className="particle-halo">
-              <animateMotion dur={duration + "s"} repeatCount="indefinite" rotate="auto">
-                <mpath href={"#" + pulseId} />
-              </animateMotion>
-            </circle>
-            <circle r="6.8" className="particle p1">
-              <animateMotion dur={duration + "s"} repeatCount="indefinite" rotate="auto">
-                <mpath href={"#" + pulseId} />
-              </animateMotion>
-            </circle>
-          </g>
+          <circle r="2.2" className="particle particle-head">
+            <animateMotion dur={duration + "s"} repeatCount="indefinite" rotate="auto">
+              <mpath href={"#" + pulseId} />
+            </animateMotion>
+          </circle>
         </svg>
         <div className="scan-light" />
       </div>
