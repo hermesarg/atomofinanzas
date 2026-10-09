@@ -71,6 +71,8 @@ export default function ElectroPulse({
   const duration = DURATIONS[state];
   const waveformTransform = "translate(0 62) scale(1 0.76) translate(0 -62)";
   const glowId = "softGlow-" + state;
+  const sweepMaskId = "sweepMask-" + state;
+  const sweepGradientId = "sweepGradient-" + state;
 
   return (
     <section className={"electro-panel " + (large ? "electro-large" : "")} aria-label={"Electro financiero: " + LABELS[state]}>
@@ -89,43 +91,47 @@ export default function ElectroPulse({
               <feGaussianBlur stdDeviation="1.2" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+
+            <linearGradient id={sweepGradientId} x1="0" x2="1">
+              <stop offset="0%" stopColor="white" />
+              <stop offset="18%" stopColor="white" />
+              <stop offset="36%" stopColor="#777" />
+              <stop offset="48%" stopColor="black" />
+              <stop offset="62%" stopColor="black" />
+              <stop offset="78%" stopColor="#777" />
+              <stop offset="100%" stopColor="white" />
+            </linearGradient>
+
+            <mask id={sweepMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="760" height="120">
+              <rect x="0" y="0" width="760" height="120" fill="white" />
+              <rect x="-118" y="0" width="118" height="120" fill={"url(#" + sweepGradientId + ")"}>
+                <animate
+                  attributeName="x"
+                  from="-118"
+                  to="760"
+                  dur={duration + "s"}
+                  repeatCount="indefinite"
+                />
+              </rect>
+            </mask>
           </defs>
           <line x1="0" y1="62" x2="760" y2="62" className="electro-baseline" />
-          <path d={path} className="electro-shadow" pathLength="1" filter={"url(#" + glowId + ")"} transform={waveformTransform} />
-
-          <path
-            d={path}
-            className="electro-afterglow electro-afterglow-long"
-            pathLength="1"
-            strokeDasharray=".33 .67"
-            strokeDashoffset="1"
-            transform={waveformTransform}
-          >
-            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
-          </path>
-
-          <path
-            d={path}
-            className="electro-afterglow electro-afterglow-mid"
-            pathLength="1"
-            strokeDasharray=".24 .76"
-            strokeDashoffset="1"
-            transform={waveformTransform}
-          >
-            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
-          </path>
-
-          <path
-            id={pulseId}
-            d={path}
-            className="electro-line electro-window"
-            pathLength="1"
-            strokeDasharray=".17 .83"
-            strokeDashoffset="1"
-            transform={waveformTransform}
-          >
-            <animate attributeName="stroke-dashoffset" from="1" to="0" dur={duration + "s"} repeatCount="indefinite" />
-          </path>
+          <g mask={"url(#" + sweepMaskId + ")"}>
+            <path
+              d={path}
+              className="electro-sweep-glow"
+              pathLength="1"
+              filter={"url(#" + glowId + ")"}
+              transform={waveformTransform}
+            />
+            <path
+              id={pulseId}
+              d={path}
+              className="electro-line electro-window"
+              pathLength="1"
+              transform={waveformTransform}
+            />
+          </g>
         </svg>
         <div className="scan-light" />
       </div>
