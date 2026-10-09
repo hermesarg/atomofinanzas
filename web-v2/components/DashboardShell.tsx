@@ -1,17 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import ElectroPulse from "./ElectroPulse";
+import { useFinance } from "@/lib/store";
+import type { MovementType } from "@/lib/types";
 
-type ActionKind = "income" | "expense" | null;
-type MobileTab = "Inicio" | "Movimientos" | "Electro" | "Más";
-
-const transactions = [
-  { title: "Sueldo", meta: "Hoy · Banco", amount: 2480000, type: "income" },
-  { title: "Supermercado", meta: "Ayer · Mastercard", amount: -68450, type: "expense" },
-  { title: "Transferencia a reserva", meta: "Ayer · Movimiento propio", amount: -200000, type: "transfer" },
-  { title: "YPF", meta: "07 oct · Ingreso", amount: 45200, type: "income" }
-] as const;
+type Tab = "Inicio" | "Movimientos" | "Electro" | "Cuentas" | "Más";
+type ActionKind = "income" | "expense" | "transfer" | null;
 
 const pesos = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -19,164 +14,514 @@ const pesos = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 0
 });
 
-export default function DashboardShell() {
-  const [action, setAction] = useState<ActionKind>(null);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("Inicio");
-  const [expanded, setExpanded] = useState(false);
+function signedMoney(value: number) {
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return sign + " " + pesos.format(Math.abs(value));
+}
 
-  const actionTitle = useMemo(
-    () => action === "income" ? "Agregar dinero" : "Registrar salida",
-    [action]
-  );
+function movementSymbol(type: MovementType) {
+  if (type === "income") return "↙";
+  if (type === "expense") return "↗";
+  return "⇄";
+}
+
+export default function DashboardShell() {
+  const { state, electro, level, addMovement, reset } = useFinance();
+  const [tab, setTab] = useState<Tab>("Inicio");
+  const [action, setAction] = useState<ActionKind>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [query, setQuery] = useState("");
+
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [accountId, setAccountId] = useState(state.accounts[0]?.id ?? "");
+  const [destinationAccountId, setDestinationAccountId] = useState(state.accounts[1]?.id ?? "");
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(""), 2200);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!action) return;
+    setTitle("");
+    setAmount("");
+    setAccountId(state.accounts[0]?.id ?? "");
+    setDestinationAccountId(state.accounts.find(a => a.id !== state.accounts[0]?.id && a.currency === state.accounts[0]?.currency)?.id ?? "");
+  }, [action, state.accounts]);
+
+  const liquid = electro.liquidArs;
+  const available = liquid - electro.nextCommitments;
+  const recent = state.movements.slice(0, 5);
+  const arsAccounts = state.accounts.filter(a => a.currency === "ARS");
+
+  const filteredMovements = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase("es");
+    if (!q) return state.movements;
+    return state.movements.filter(m =>
+      [m.title, m.category, m.type].some(value => value.toLocaleLowerCase("es").includes(q))
+    );
+  }, [state.movements, query]);
+
+  function openAction(kind: Exclude<ActionKind, null>) {
+    setAction(kind);
+  }
+
+  function submitMovement(event: FormEvent) {
+    event.preventDefault();
+    if (!action) return;
+
+    const numeric = Number(amount.replace(/./g, "").replace(",", "."));
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      setNotice("Revisá el monto");
+      return;
+    }
+
+    if (action === "transfer") {
+      if (!destinationAccountId || destinationAccountId === accountId) {
+        setNotice("Elegí otra cuenta de destino");
+        return;
+      }
+      const source = state.accounts.find(a => a.id === accountId);
+      const target = state.accounts.find(a => a.id === destinationAccountId);
+      if (!source || !target || source.currency !== target.currency) {
+        setNotice("Las cuentas deben usar la misma moneda");
+        return;
+      }
+    }
+
+    addMovement({
+      type: action,
+      title,
+      amount: numeric,
+      accountId,
+      destinationAccountId: action === "transfer" ? destinationAccountId : undefined
+    });
+
+    setNotice(action === "income" ? "Dinero agregado" : action === "expense" ? "Salida registrada" : "Transferencia registrada");
+    setAction(null);
+  }
+
+  const actionTitle =
+    action === "income" ? "Agregar dinero" :
+    action === "expense" ? "Registrar salida" :
+    action === "transfer" ? "Mover entre mis cuentas" : "";
 
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand-mark" aria-hidden="true"><span>Á</span></div>
+        <button className="brand-mark" aria-label="Ir al inicio" onClick={() => setTab("Inicio")}><span>Á</span></button>
         <div className="brand-copy">
           <strong>Átomo Finanzas</strong>
           <span>Las cuentas las hago yo. Las decisiones, vos.</span>
         </div>
 
         <nav className="desktop-nav" aria-label="Navegación principal">
-          {["Inicio", "Movimientos", "Electro", "Cuentas", "Más"].map((item, index) => (
-            <button key={item} className={index === 0 ? "active" : ""}>{item}</button>
+          {(["Inicio", "Movimientos", "Electro", "Cuentas", "Más"] as Tab[]).map(item => (
+            <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>
           ))}
         </nav>
 
-        <button className="profile-chip" aria-label="Perfil">
+        <button className="profile-chip" onClick={() => setTab("Más")} aria-label="Perfil">
           <span className="avatar-mini">M</span>
           <span className="profile-copy"><strong>Mi espacio</strong><small>Privado</small></span>
         </button>
       </header>
 
       <div className="workspace">
-        <section className="hero-card entrance entrance-1">
-          <div className="hero-top">
-            <div>
-              <span className="eyebrow">DISPONIBLE</span>
-              <h1>{pesos.format(2550000)}</h1>
-              <p>Octubre · desde tu fecha habitual de cobro</p>
-            </div>
-            <button className="eye-button" aria-label="Ocultar saldo">◉</button>
-          </div>
+        {tab === "Inicio" && (
+          <Home
+            available={available}
+            liquid={liquid}
+            expanded={expanded}
+            setExpanded={setExpanded}
+            electro={electro}
+            level={level}
+            movements={recent}
+            onIncome={() => openAction("income")}
+            onExpense={() => openAction("expense")}
+            onTransfer={() => openAction("transfer")}
+            periodLabel={state.periodLabel}
+            bufferTarget={state.bufferTarget}
+            onGoMovements={() => setTab("Movimientos")}
+            onGoElectro={() => setTab("Electro")}
+          />
+        )}
 
-          <div className="primary-actions">
-            <button className="money-action income" onClick={() => setAction("income")}>
-              <span className="action-icon">＋</span>
-              <span><strong>Agregar dinero</strong><small>Ingreso, sueldo o cobro</small></span>
-            </button>
-            <button className="money-action expense" onClick={() => setAction("expense")}>
-              <span className="action-icon">−</span>
-              <span><strong>Sacar dinero</strong><small>Pago, compra o transferencia</small></span>
-            </button>
-          </div>
+        {tab === "Movimientos" && (
+          <MovementsView
+            movements={filteredMovements}
+            query={query}
+            setQuery={setQuery}
+            onIncome={() => openAction("income")}
+            onExpense={() => openAction("expense")}
+            onTransfer={() => openAction("transfer")}
+          />
+        )}
 
-          <button className="hero-detail-toggle" onClick={() => setExpanded(v => !v)}>
-            {expanded ? "Ocultar detalle" : "Ver cómo se compone"} <span>{expanded ? "⌃" : "⌄"}</span>
-          </button>
+        {tab === "Electro" && (
+          <ElectroView electro={electro} level={level} />
+        )}
 
-          <div className={"hero-breakdown " + (expanded ? "open" : "")}>
-            <div><span>Caja líquida</span><strong>{pesos.format(3160000)}</strong></div>
-            <div><span>Próximos compromisos</span><strong className="amount-out">− {pesos.format(610000)}</strong></div>
-            <div><span>Colchón objetivo</span><strong>{pesos.format(700000)}</strong></div>
-          </div>
-        </section>
+        {tab === "Cuentas" && (
+          <AccountsView
+            accounts={state.accounts}
+            onIncome={() => openAction("income")}
+            onExpense={() => openAction("expense")}
+            onTransfer={() => openAction("transfer")}
+          />
+        )}
 
-        <section className="dashboard-grid">
-          <div className="left-column">
-            <section className="card entrance entrance-2">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">HOY</span>
-                  <h2>Tu plata, simple</h2>
-                </div>
-                <button className="text-button">Ver todo</button>
-              </div>
-              <div className="summary-strip">
-                <div><span>Entró</span><strong className="amount-in">+ {pesos.format(2525200)}</strong></div>
-                <div><span>Salió</span><strong className="amount-out">− {pesos.format(413450)}</strong></div>
-                <div><span>Balance</span><strong>+ {pesos.format(2111750)}</strong></div>
-              </div>
-            </section>
-
-            <section className="card entrance entrance-3">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">ÚLTIMOS MOVIMIENTOS</span>
-                  <h2>Actividad</h2>
-                </div>
-                <button className="text-button">Todos</button>
-              </div>
-              <div className="transaction-list">
-                {transactions.map((t, index) => (
-                  <button className="transaction-row" key={t.title + index}>
-                    <span className={"tx-icon " + t.type}>
-                      {t.type === "income" ? "↙" : t.type === "expense" ? "↗" : "⇄"}
-                    </span>
-                    <span className="tx-copy"><strong>{t.title}</strong><small>{t.meta}</small></span>
-                    <span className={t.amount > 0 ? "tx-amount amount-in" : "tx-amount amount-out"}>
-                      {t.amount > 0 ? "+" : "−"} {pesos.format(Math.abs(t.amount))}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="right-column entrance entrance-2">
-            <ElectroPulse state="firme" />
-
-            <section className="card atom-level-card">
-              <div className="atom-orbit" aria-hidden="true">
-                <span className="nucleus">Á</span>
-                <i className="orbit orbit-a"><b /></i>
-                <i className="orbit orbit-b"><b /></i>
-              </div>
-              <div>
-                <span className="eyebrow">TU EVOLUCIÓN</span>
-                <h2>Átomo</h2>
-                <p>El punto de partida. Tu nivel mejora por orden y hábitos, no por tener más plata.</p>
-                <div className="progress-track"><span style={{ width: "46%" }} /></div>
-                <small>46% hacia Agua</small>
-              </div>
-            </section>
-          </div>
-        </section>
+        {tab === "Más" && (
+          <MoreView
+            debts={state.debts}
+            onAccounts={() => setTab("Cuentas")}
+            onReset={() => {
+              reset();
+              setNotice("Prototipo restaurado");
+              setTab("Inicio");
+            }}
+          />
+        )}
       </div>
 
       <nav className="mobile-bottom-nav" aria-label="Navegación móvil">
-        {(["Inicio", "Movimientos", "Electro", "Más"] as MobileTab[]).map(tab => (
-          <button
-            key={tab}
-            className={mobileTab === tab ? "active" : ""}
-            onClick={() => setMobileTab(tab)}
-          >
-            <span>{tab === "Inicio" ? "⌂" : tab === "Movimientos" ? "↕" : tab === "Electro" ? "⌁" : "•••"}</span>
-            <small>{tab}</small>
+        {(["Inicio", "Movimientos", "Electro", "Más"] as Tab[]).map(item => (
+          <button key={item} className={tab === item || (item === "Más" && tab === "Cuentas") ? "active" : ""} onClick={() => setTab(item)}>
+            <span>{item === "Inicio" ? "⌂" : item === "Movimientos" ? "↕" : item === "Electro" ? "⌁" : "•••"}</span>
+            <small>{item}</small>
           </button>
         ))}
       </nav>
 
       <div className={"sheet-backdrop " + (action ? "show" : "")} onClick={() => setAction(null)} />
-      <section className={"action-sheet " + (action ? "open" : "") + " " + (action ?? "")} aria-hidden={!action}>
+      <form className={"action-sheet " + (action ? "open" : "") + " " + (action ?? "")} onSubmit={submitMovement} aria-hidden={!action}>
         <div className="sheet-handle" />
         <div className="section-heading">
           <div>
-            <span className="eyebrow">{action === "income" ? "ENTRADA" : "SALIDA"}</span>
+            <span className="eyebrow">{action === "income" ? "ENTRADA" : action === "expense" ? "SALIDA" : "MOVIMIENTO PROPIO"}</span>
             <h2>{actionTitle}</h2>
           </div>
-          <button className="sheet-close" onClick={() => setAction(null)}>×</button>
+          <button type="button" className="sheet-close" onClick={() => setAction(null)}>×</button>
         </div>
+
         <label className="amount-field">
           <span>Monto</span>
-          <div><span>$</span><input inputMode="decimal" placeholder="0" aria-label="Monto" /></div>
+          <div><span>$</span><input inputMode="decimal" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} autoFocus /></div>
         </label>
-        <button className="sheet-row"><span>Concepto</span><strong>Elegir ›</strong></button>
-        <button className="sheet-row"><span>{action === "income" ? "¿Dónde entra?" : "¿De dónde sale?"}</span><strong>Elegir ›</strong></button>
-        <button className="sheet-primary">{action === "income" ? "Agregar" : "Registrar salida"}</button>
-        <p className="prototype-note">Prototipo visual V2 · todavía no escribe en la base real.</p>
-      </section>
+
+        <label className="field-block">
+          <span>¿Qué fue?</span>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder={action === "income" ? "Ej.: Sueldo" : action === "expense" ? "Ej.: Supermercado" : "Ej.: Ahorro"} />
+        </label>
+
+        <label className="field-block">
+          <span>{action === "income" ? "¿Dónde entra?" : "¿De dónde sale?"}</span>
+          <select value={accountId} onChange={e => setAccountId(e.target.value)}>
+            {state.accounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
+          </select>
+        </label>
+
+        {action === "transfer" && (
+          <label className="field-block">
+            <span>¿A cuál de tus cuentas va?</span>
+            <select value={destinationAccountId} onChange={e => setDestinationAccountId(e.target.value)}>
+              {state.accounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}
+            </select>
+          </label>
+        )}
+
+        <button className="sheet-primary" type="submit">
+          {action === "income" ? "Agregar dinero" : action === "expense" ? "Registrar salida" : "Mover dinero"}
+        </button>
+        <p className="prototype-note">V2 en paralelo · estas pruebas quedan sólo en este navegador.</p>
+      </form>
+
+      <div className={"toast " + (notice ? "show" : "")} role="status">{notice}</div>
     </main>
+  );
+}
+
+function Home(props: {
+  available: number;
+  liquid: number;
+  expanded: boolean;
+  setExpanded: (value: boolean) => void;
+  electro: ReturnType<typeof useFinance>["electro"];
+  level: ReturnType<typeof useFinance>["level"];
+  movements: ReturnType<typeof useFinance>["state"]["movements"];
+  onIncome: () => void;
+  onExpense: () => void;
+  onTransfer: () => void;
+  periodLabel: string;
+  bufferTarget: number;
+  onGoMovements: () => void;
+  onGoElectro: () => void;
+}) {
+  const { electro, level } = props;
+
+  return (
+    <>
+      <section className="hero-card entrance entrance-1">
+        <div className="hero-top">
+          <div>
+            <span className="eyebrow">DISPONIBLE</span>
+            <h1>{pesos.format(Math.max(0, props.available))}</h1>
+            <p>{props.periodLabel}</p>
+          </div>
+          <div className="period-pill">Período activo</div>
+        </div>
+
+        <div className="primary-actions">
+          <button className="money-action income" onClick={props.onIncome}>
+            <span className="action-icon">＋</span>
+            <span><strong>Agregar dinero</strong><small>Ingreso, sueldo o cobro</small></span>
+          </button>
+          <button className="money-action expense" onClick={props.onExpense}>
+            <span className="action-icon">−</span>
+            <span><strong>Sacar dinero</strong><small>Pago, compra o gasto</small></span>
+          </button>
+        </div>
+
+        <div className="secondary-action-row">
+          <button className="soft-action" onClick={props.onTransfer}>⇄ Mover entre mis cuentas</button>
+          <button className="hero-detail-toggle" onClick={() => props.setExpanded(!props.expanded)}>
+            {props.expanded ? "Ocultar detalle" : "Ver cómo se compone"} <span>{props.expanded ? "⌃" : "⌄"}</span>
+          </button>
+        </div>
+
+        <div className={"hero-breakdown " + (props.expanded ? "open" : "")}>
+          <div><span>Caja líquida</span><strong>{pesos.format(props.liquid)}</strong></div>
+          <div><span>Próximos compromisos</span><strong className="amount-out">− {pesos.format(electro.nextCommitments)}</strong></div>
+          <div><span>Colchón objetivo</span><strong>{pesos.format(props.bufferTarget)}</strong></div>
+        </div>
+      </section>
+
+      <section className="dashboard-grid">
+        <div className="left-column">
+          <section className="card entrance entrance-2">
+            <div className="section-heading">
+              <div><span className="eyebrow">ESTE PERÍODO</span><h2>Tu plata, simple</h2></div>
+              <span className="tiny-score">{electro.overall}/100</span>
+            </div>
+            <div className="summary-strip">
+              <div><span>Entró</span><strong className="amount-in">{signedMoney(electro.income)}</strong></div>
+              <div><span>Salió</span><strong className="amount-out">{signedMoney(-electro.expenses)}</strong></div>
+              <div><span>Balance</span><strong className={electro.balance >= 0 ? "amount-in" : "amount-out"}>{signedMoney(electro.balance)}</strong></div>
+            </div>
+          </section>
+
+          <section className="card entrance entrance-3">
+            <div className="section-heading">
+              <div><span className="eyebrow">ÚLTIMOS MOVIMIENTOS</span><h2>Actividad</h2></div>
+              <button className="text-button" onClick={props.onGoMovements}>Ver todo</button>
+            </div>
+            <MovementList movements={props.movements} />
+          </section>
+        </div>
+
+        <div className="right-column entrance entrance-2">
+          <button className="card-link-wrap" onClick={props.onGoElectro} aria-label="Abrir Electro financiero">
+            <ElectroPulse
+              state={electro.state}
+              liquidity={electro.liquidityLabel}
+              solvency={electro.solvencyLabel}
+              flow={electro.flowLabel}
+            />
+          </button>
+
+          <section className="card atom-level-card">
+            <div className="atom-orbit" aria-hidden="true">
+              <span className="nucleus">Á</span>
+              <i className="orbit orbit-a"><b /></i>
+              <i className="orbit orbit-b"><b /></i>
+            </div>
+            <div>
+              <span className="eyebrow">TU EVOLUCIÓN</span>
+              <h2>{level.name}</h2>
+              <p>{level.description}</p>
+              <div className="progress-track"><span style={{ width: Math.round(level.progress * 100) + "%" }} /></div>
+              <small>{level.next ? Math.round(level.progress * 100) + "% hacia " + level.next : "Nivel máximo actual"}</small>
+            </div>
+          </section>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function MovementsView(props: {
+  movements: ReturnType<typeof useFinance>["state"]["movements"];
+  query: string;
+  setQuery: (value: string) => void;
+  onIncome: () => void;
+  onExpense: () => void;
+  onTransfer: () => void;
+}) {
+  return (
+    <section className="page-stack entrance entrance-1">
+      <div className="page-title-row">
+        <div><span className="eyebrow">MOVIMIENTOS</span><h1>Todo lo que pasó</h1><p>Buscá, cargá o revisá sin perderte entre formularios.</p></div>
+        <div className="desktop-quick-actions">
+          <button className="mini-action income" onClick={props.onIncome}>＋ Entrada</button>
+          <button className="mini-action expense" onClick={props.onExpense}>− Salida</button>
+          <button className="mini-action neutral" onClick={props.onTransfer}>⇄ Mover</button>
+        </div>
+      </div>
+
+      <section className="card">
+        <div className="search-row">
+          <input value={props.query} onChange={e => props.setQuery(e.target.value)} placeholder="Buscar movimiento..." />
+          <span>{props.movements.length} registros</span>
+        </div>
+        <MovementList movements={props.movements} large />
+      </section>
+
+      <div className="mobile-floating-actions">
+        <button className="income" onClick={props.onIncome}>＋</button>
+        <button className="expense" onClick={props.onExpense}>−</button>
+        <button className="neutral" onClick={props.onTransfer}>⇄</button>
+      </div>
+    </section>
+  );
+}
+
+function ElectroView(props: {
+  electro: ReturnType<typeof useFinance>["electro"];
+  level: ReturnType<typeof useFinance>["level"];
+}) {
+  const e = props.electro;
+  return (
+    <section className="page-stack entrance entrance-1">
+      <div className="page-title-row">
+        <div><span className="eyebrow">SALUD FINANCIERA</span><h1>Electro</h1><p>No decide por vos: te muestra dónde hay margen y dónde conviene mirar.</p></div>
+        <div className="score-orb"><strong>{e.overall}</strong><span>/100</span></div>
+      </div>
+
+      <ElectroPulse state={e.state} liquidity={e.liquidityLabel} solvency={e.solvencyLabel} flow={e.flowLabel} large />
+
+      <div className="metric-grid">
+        <MetricCard title="Liquidez" value={e.liquidity} label={e.liquidityLabel} detail={"Caja líquida: " + pesos.format(e.liquidArs)} />
+        <MetricCard title="Solvencia" value={e.solvency} label={e.solvencyLabel} detail="Activos conocidos frente a deudas cargadas." />
+        <MetricCard title="Flujo" value={e.flow} label={e.flowLabel} detail={"Balance del período: " + signedMoney(e.balance)} />
+      </div>
+
+      <section className="card evolution-wide">
+        <div className="atom-orbit" aria-hidden="true">
+          <span className="nucleus">Á</span>
+          <i className="orbit orbit-a"><b /></i>
+          <i className="orbit orbit-b"><b /></i>
+        </div>
+        <div className="evolution-copy">
+          <span className="eyebrow">EVOLUCIÓN</span>
+          <h2>{props.level.name}</h2>
+          <p>{props.level.description} El nivel mide orden y hábitos, nunca riqueza absoluta.</p>
+          <div className="progress-track"><span style={{ width: Math.round(props.level.progress * 100) + "%" }} /></div>
+          <small>{props.level.next ? "Próxima evolución: " + props.level.next : "Nivel máximo actual"}</small>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function AccountsView(props: {
+  accounts: ReturnType<typeof useFinance>["state"]["accounts"];
+  onIncome: () => void;
+  onExpense: () => void;
+  onTransfer: () => void;
+}) {
+  return (
+    <section className="page-stack entrance entrance-1">
+      <div className="page-title-row">
+        <div><span className="eyebrow">CUENTAS</span><h1>Tu plata por lugar</h1><p>Lo esencial primero. Los ajustes avanzados quedan atrás.</p></div>
+        <button className="mini-action neutral" onClick={props.onTransfer}>⇄ Mover entre cuentas</button>
+      </div>
+
+      <div className="account-grid">
+        {props.accounts.map(account => (
+          <article className="account-card" key={account.id}>
+            <div className="account-logo">{account.name.slice(0,1).toUpperCase()}</div>
+            <div className="account-main">
+              <span>{account.institution}</span>
+              <h2>{account.name}</h2>
+              <strong>{account.currency === "ARS" ? pesos.format(account.balance) : account.currency + " " + account.balance.toLocaleString("es-AR")}</strong>
+            </div>
+            <div className="account-status">{account.liquid ? "Disponible" : "Reserva"}</div>
+          </article>
+        ))}
+      </div>
+
+      <section className="card quick-center">
+        <button className="mini-action income" onClick={props.onIncome}>＋ Agregar dinero</button>
+        <button className="mini-action expense" onClick={props.onExpense}>− Registrar salida</button>
+      </section>
+    </section>
+  );
+}
+
+function MoreView(props: {
+  debts: ReturnType<typeof useFinance>["state"]["debts"];
+  onAccounts: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <section className="page-stack entrance entrance-1">
+      <div className="page-title-row">
+        <div><span className="eyebrow">MÁS</span><h1>Todo lo demás, sin ruido</h1><p>Lo menos frecuente vive acá para que Inicio siga simple.</p></div>
+      </div>
+
+      <div className="more-grid">
+        <button className="more-card" onClick={props.onAccounts}><span>🏦</span><div><strong>Cuentas</strong><small>Saldos, instituciones y movimientos propios</small></div><b>›</b></button>
+        <button className="more-card"><span>💳</span><div><strong>Tarjetas y cuotas</strong><small>Cierres, vencimientos y compras</small></div><b>›</b></button>
+        <button className="more-card"><span>📈</span><div><strong>Inversiones</strong><small>Posiciones y comparaciones</small></div><b>›</b></button>
+        <button className="more-card"><span>⚙️</span><div><strong>Configuración</strong><small>Período, objetivos y preferencias</small></div><b>›</b></button>
+      </div>
+
+      <section className="card">
+        <div className="section-heading"><div><span className="eyebrow">PRÓXIMOS COMPROMISOS</span><h2>Deudas cargadas</h2></div></div>
+        <div className="debt-list">
+          {props.debts.map(debt => (
+            <div key={debt.id}><span><strong>{debt.name}</strong><small>{debt.dueDate ? "Vence " + debt.dueDate.split("-").reverse().join("/") : "Sin fecha"}</small></span><b>{pesos.format(debt.nextPayment)}</b></div>
+          ))}
+        </div>
+      </section>
+
+      <button className="reset-prototype" onClick={props.onReset}>Restaurar datos de prueba de V2</button>
+    </section>
+  );
+}
+
+function MetricCard(props: { title: string; value: number; label: string; detail: string }) {
+  return (
+    <article className="metric-card">
+      <span className="eyebrow">{props.title.toUpperCase()}</span>
+      <div className="metric-number"><strong>{props.value}</strong><small>/100</small></div>
+      <h3>{props.label}</h3>
+      <p>{props.detail}</p>
+      <div className="metric-bar"><span style={{ width: props.value + "%" }} /></div>
+    </article>
+  );
+}
+
+function MovementList(props: { movements: ReturnType<typeof useFinance>["state"]["movements"]; large?: boolean }) {
+  if (!props.movements.length) return <div className="empty-state">No hay movimientos para mostrar.</div>;
+
+  return (
+    <div className={"transaction-list " + (props.large ? "large" : "")}>
+      {props.movements.map(t => (
+        <button className="transaction-row" key={t.id}>
+          <span className={"tx-icon " + t.type}>{movementSymbol(t.type)}</span>
+          <span className="tx-copy">
+            <strong>{t.title}</strong>
+            <small>{t.date.split("-").reverse().join("/")} · {t.category}</small>
+          </span>
+          <span className={t.type === "income" ? "tx-amount amount-in" : t.type === "expense" ? "tx-amount amount-out" : "tx-amount"}>
+            {t.type === "income" ? "+ " : t.type === "expense" ? "− " : ""}{t.currency === "ARS" ? pesos.format(t.amount) : t.currency + " " + t.amount.toLocaleString("es-AR")}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
