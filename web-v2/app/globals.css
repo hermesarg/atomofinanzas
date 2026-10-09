@@ -794,15 +794,10 @@ html[data-theme="light"] .mobile-bottom-nav { background:rgba(255,255,255,.95); 
   stroke-linejoin:round;
   filter:drop-shadow(0 0 2px rgba(255,138,31,.10));
 }
-.particle-halo { display:none; }
-.particle {
-  fill:#ffb457;
-  stroke:none;
-  opacity:.18;
-  filter:drop-shadow(0 0 4px rgba(255,138,31,.30)) !important;
-}
+.particle-halo,
+.particle,
 .particle-head {
-  opacity:.14;
+  display:none !important;
 }
 .scan-light { display:none !important; }
 .electro-glow { display:none !important; }
@@ -844,20 +839,63 @@ html[data-theme="light"] .particle {
 }
 
 
-/* --- Electro monitor: sólo queda visible el tramo reciente del barrido --- */
+/* --- Electro monitor: barrido limpio que aparece y se desvanece --- */
 .electro-window {
   stroke-linecap:round;
   stroke-linejoin:round;
 }
 .electro-shadow {
-  opacity:.008 !important;
+  opacity:0 !important;
+}
+.electro-afterglow {
+  fill:none;
+  stroke:#ff8a1f;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  pointer-events:none;
+}
+.electro-afterglow-long {
+  stroke-width:8.5;
+  opacity:.018;
+  filter:drop-shadow(0 0 5px rgba(255,138,31,.08));
+}
+.electro-afterglow-mid {
+  stroke-width:5.5;
+  opacity:.045;
+  filter:drop-shadow(0 0 3px rgba(255,138,31,.10));
+}
+.electro-line {
+  stroke-width:2.55 !important;
+  opacity:.96 !important;
+  filter:drop-shadow(0 0 2px rgba(255,138,31,.20));
 }
 .electro-trail {
-  opacity:.045 !important;
+  display:none !important;
 }
-html[data-theme="dark"] .electro-trail {
-  opacity:.04 !important;
+.particle-halo,
+.particle,
+.particle-head {
+  display:none !important;
 }
-html[data-theme="light"] .electro-trail {
-  opacity:.04 !important;
+
+html[data-theme="dark"] .electro-afterglow-long {
+  opacity:.022;
+}
+html[data-theme="dark"] .electro-afterglow-mid {
+  opacity:.055;
+}
+html[data-theme="dark"] .electro-line {
+  stroke:#e4872d !important;
+}
+html[data-theme="light"] .electro-line {
+  stroke:#c96a18 !important;
+}
+html[data-theme="light"] .electro-afterglow-mid {
+  opacity:.04;
+}
+
+@media (max-width:900px) {
+  .electro-line { stroke-width:2.7 !important; }
+  .electro-afterglow-mid { stroke-width:5.8; }
+  .electro-afterglow-long { stroke-width:9; }
 }
